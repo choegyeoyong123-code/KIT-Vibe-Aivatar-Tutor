@@ -1,7 +1,12 @@
 import type { DistilledData } from "@/lib/agent/types";
 import type { PersonaMediaProfile } from "@/lib/agent/persona/persona-presets";
+import type {
+  DeletedFileMetadata,
+  DeletionReceipt,
+} from "@/lib/security/deletion-receipt";
 
 export type { PersonaMediaProfile };
+export type { DeletedFileMetadata, DeletionReceipt };
 
 export type AvatarStylePreset =
   | "3d_animation"
@@ -42,6 +47,8 @@ export interface AvatarLectureJob {
    * Required for render when `KIT_SECURITY_GATE_STRICT=1`.
    */
   userPhotoDeletionAcknowledged?: boolean;
+  deletionReceipt?: DeletionReceipt;
+  deletedFileMetadata?: DeletedFileMetadata;
   /** Persona_Manager / 클라이언트: 립싱크·TTS·마스터 표정과 정합 */
   kitPersonaId?: string;
   personaMediaHints?: PersonaMediaProfile | null;

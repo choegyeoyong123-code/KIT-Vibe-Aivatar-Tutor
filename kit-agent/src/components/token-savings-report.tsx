@@ -86,6 +86,7 @@ export function TokenSavingsReport({
       : DEFAULT_DYNAMIC_PERSONA_ID;
 
   const breakdown = metrics ? tokenBreakdown(metrics) : null;
+  const reasoningRationale = liveSnapshot?.distilledData?.reasoning_rationale?.trim() ?? "";
 
   const maxBar = useMemo(() => {
     if (!breakdown) return 1;
@@ -95,10 +96,7 @@ export function TokenSavingsReport({
   const estSavedUsd = (cumulativeSavedTokens / 1000) * INPUT_USD_PER_1K;
   const displayTotal = useAnimatedInt(cumulativeSavedTokens, open);
   const finOps = liveSnapshot?.finOps ?? null;
-  const finOpsBarMax = useMemo(() => {
-    if (!finOps) return 1;
-    return Math.max(finOps.traditionalTokens, finOps.optimizedTokens, 1);
-  }, [finOps]);
+  const finOpsBarMax = 100;
 
   useEffect(() => {
     if (!open) return;
@@ -181,44 +179,69 @@ export function TokenSavingsReport({
                 <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
                   <dt className="text-slate-500 dark:text-slate-400">Hypothetical full input</dt>
                   <dd className="font-mono font-semibold text-slate-900 tabular-nums dark:text-slate-100">
-                    {finOps.traditionalTokens.toLocaleString("ko-KR")} tok
+                    {finOps.estimated_savings.traditionalTokens.toLocaleString("ko-KR")} tok
                   </dd>
                 </div>
                 <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Optimized (injection + cache)</dt>
+                  <dt className="text-slate-500 dark:text-slate-400">Projected optimized input</dt>
                   <dd className="font-mono font-semibold text-emerald-800 tabular-nums dark:text-emerald-300">
-                    {finOps.optimizedTokens.toLocaleString("ko-KR")} tok
+                    {finOps.estimated_savings.optimizedTokens.toLocaleString("ko-KR")} tok
                   </dd>
                 </div>
                 <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Savings (input)</dt>
+                  <dt className="text-slate-500 dark:text-slate-400">Projected efficiency</dt>
                   <dd className="font-mono font-semibold text-amber-900 tabular-nums dark:text-amber-100">
-                    {finOps.savingsPercentage}%
+                    {finOps.estimated_savings.savingsPercentage}%
                   </dd>
                 </div>
                 <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Input $ saved (est.)</dt>
+                  <dt className="text-slate-500 dark:text-slate-400">Measured reality</dt>
                   <dd className="font-mono font-semibold text-slate-900 tabular-nums dark:text-slate-100">
-                    ${finOps.dollarsSaved.toFixed(4)}
+                    {finOps.measured_performance
+                      ? `${finOps.measured_performance.savingsPercentage}%`
+                      : "N/A"}
                   </dd>
                 </div>
               </dl>
+              {finOps.measured_performance ? (
+                <p className="mt-3 text-[11px] text-slate-600 dark:text-slate-400">
+                  actual_input_tokens={finOps.measured_performance.metrics.actual_input_tokens.toLocaleString("ko-KR")}
+                  {" · "}
+                  cached_tokens_hit={finOps.measured_performance.metrics.cached_tokens_hit.toLocaleString("ko-KR")}
+                  {" · "}
+                  execution_time_ms={finOps.measured_performance.metrics.execution_time_ms}
+                </p>
+              ) : null}
               <div className="mt-4 space-y-2">
                 <BarRow
-                  label="Hypothetical full-prompt input"
-                  sub="중복 페르소나·콜드 풀 시나리오"
-                  value={finOps.traditionalTokens}
-                  max={finOpsBarMax}
-                  tone="rose"
-                />
-                <BarRow
-                  label="Optimized input (measured + cache model)"
-                  sub="Variable Injection + base KIT prompt cache"
-                  value={finOps.optimizedTokens}
+                  label="Projected Efficiency"
+                  sub={`savings ${finOps.estimated_savings.savingsPercentage}% (model-based)`}
+                  value={finOps.estimated_savings.savingsPercentage}
                   max={finOpsBarMax}
                   tone="emerald"
                 />
+                <BarRow
+                  label="Measured Reality"
+                  sub={
+                    finOps.measured_performance
+                      ? `savings ${finOps.measured_performance.savingsPercentage}% (header-based)`
+                      : "provider cache headers unavailable"
+                  }
+                  value={finOps.measured_performance?.savingsPercentage ?? 0}
+                  max={finOpsBarMax}
+                  tone="rose"
+                />
               </div>
+              {reasoningRationale ? (
+                <div className="mt-4 rounded-xl border border-amber-200/80 bg-white/75 p-3 dark:border-amber-900/40 dark:bg-slate-900/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                    Reasoning Rationale
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                    {reasoningRationale}
+                  </p>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

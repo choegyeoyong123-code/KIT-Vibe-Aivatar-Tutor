@@ -1,5 +1,6 @@
 import type { AgentStateSnapshot } from "@/lib/agent/types";
 import type { PrivacyTerminalPhase } from "@/components/privacy-security-terminal";
+import type { DeletionReceipt } from "@/lib/security/deletion-receipt";
 
 export type SecurityPulsePhase = "idle" | "active" | "success";
 
@@ -7,6 +8,7 @@ export type SecurityPulseSnapshot = {
   phase: SecurityPulsePhase;
   /** Security_Guardian 추적·세션 완료 기준: 원시 바이오메트릭/업로드 프레임이 제거된 것으로 확정 */
   isPhotoDeleted: boolean;
+  deletion_receipt?: DeletionReceipt | null;
 };
 
 /**

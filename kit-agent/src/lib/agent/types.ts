@@ -201,6 +201,11 @@ export interface DistilledData {
   key_takeaways: string[];
   /** 짧은 CoT 요약(내부 단계 정리; 장문 전체 덤프 금지) */
   cot_reasoning: string;
+  /**
+   * 근거 기반 의사결정 요약(외부 표시용).
+   * 내부 사고과정 원문/장문 CoT를 노출하지 않고, 학습자 상태·입력 근거 중심으로 작성.
+   */
+  reasoning_rationale: string;
 }
 
 export type ValidatorNextGraphNode = "Knowledge_Distiller" | "CFO_Agent";
@@ -210,11 +215,31 @@ export type ValidatorNextGraphNode = "Knowledge_Distiller" | "CFO_Agent";
  * Hypothetical full-prompt vs Variable Injection + prompt caching.
  */
 export interface AgentFinOps {
+  estimated_savings: {
+    traditionalTokens: number;
+    optimizedTokens: number;
+    savingsPercentage: number;
+    dollarsSaved: number;
+  };
+  measured_performance: {
+    traditionalTokens: number;
+    optimizedTokens: number;
+    savingsPercentage: number;
+    dollarsSaved: number;
+    metrics: MeasuredMetrics;
+  } | null;
+  /** legacy flat fields (UI backward compatibility) */
   traditionalTokens: number;
   optimizedTokens: number;
   savingsPercentage: number;
   dollarsSaved: number;
   efficiencySummary: string;
+}
+
+export interface MeasuredMetrics {
+  actual_input_tokens: number;
+  cached_tokens_hit: number;
+  execution_time_ms: number;
 }
 
 export interface ValidationResultPayload {

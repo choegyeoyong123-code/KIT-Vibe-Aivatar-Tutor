@@ -5,19 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Radio, Terminal } from "lucide-react";
 import type { FeedbackLogEntry } from "@/lib/agent/types";
 import { cn } from "@/lib/utils";
-
-function formatClock(iso: string) {
-  try {
-    return new Date(iso).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-  } catch {
-    return "--:--:--";
-  }
-}
+import { formatTimestamp } from "@/lib/format-timestamp";
 
 export function AgentTraceTerminal({
   orchestratorLines,
@@ -113,7 +101,7 @@ export function AgentTraceTerminal({
                   className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5"
                 >
                   <div className="mb-0.5 flex flex-wrap gap-2 text-[10px] text-zinc-500">
-                    <span>{formatClock(entry.at)}</span>
+                    <span>{formatTimestamp(entry.at)}</span>
                     <span className="text-cyan-400/85">{entry.phase}</span>
                   </div>
                   <p className="whitespace-pre-wrap text-zinc-200/95">{entry.message}</p>

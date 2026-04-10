@@ -22,6 +22,7 @@ export type {
 export {
   computeTokenEfficiencyEngine,
   buildFinOpsEfficiencySummary,
+  calculateActualEfficiency,
 } from "@/lib/agent/finops/token-efficiency-engine";
 export type { LearningPersonaId } from "@/lib/agent/learning-persona";
 export {

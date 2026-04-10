@@ -22,6 +22,7 @@ export type DistillerJsonV1 = {
     technical_concepts?: unknown;
     key_takeaways?: unknown;
     cot_reasoning?: unknown;
+    reasoning_rationale?: unknown;
   };
   self_check?: {
     claims_grounded_in_materials_only?: boolean;
@@ -75,12 +76,18 @@ function normalizeDistilledData(raw: DistillerJsonV1["distilled_data"]): Distill
   const concepts = normalizeTechnicalConcepts(raw.technical_concepts, 8);
   const cot =
     typeof raw.cot_reasoning === "string" ? clampStr(raw.cot_reasoning, 1200) : "";
-  if (!objectives.length && !takeaways.length && !concepts.length && !cot) return null;
+  const rationale =
+    typeof raw.reasoning_rationale === "string"
+      ? clampStr(raw.reasoning_rationale, 700)
+      : "";
+  if (!objectives.length && !takeaways.length && !concepts.length && !cot && !rationale)
+    return null;
   return {
     core_learning_objectives: objectives,
     technical_concepts: concepts,
     key_takeaways: takeaways,
     cot_reasoning: cot,
+    reasoning_rationale: rationale,
   };
 }
 

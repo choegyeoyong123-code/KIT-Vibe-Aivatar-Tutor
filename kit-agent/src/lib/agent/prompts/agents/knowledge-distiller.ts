@@ -31,7 +31,9 @@ const CHAIN_OF_THOUGHT_PROCEDURE = `## (2) Chain-of-Thought (execute before JSON
    - **standard_kit**: default 한국 공대 강의실 톤 — structured sections, exam-ready density.
    - **expert_technical**: denser terminology, fewer hand-holds, assumes prior coursework; still no invented citations.
 4. **Gap scan**: mark "(not in source materials)" where the user style would need missing facts.
-5. **Distilled_data**: Fill \`distilled_data\` from the **selected** variant's cognitive core (objectives, concepts why/how, takeaways, cot_reasoning).
+5. **Distilled_data**: Fill \`distilled_data\` from the **selected** variant's cognitive core (objectives, concepts why/how, takeaways, cot_reasoning, reasoning_rationale).
+   - \`reasoning_rationale\` must be an **evidence-grounded short rationale** (2-4 sentences) describing *why* this teaching focus/order was selected for learner growth.
+   - Never reveal raw internal chain-of-thought; include only externally auditable factors (learning persona, user instruction, source coverage gaps, mastery risk).
 6. **Selection**: Set \`pedagogy_pack.selected_persona_id\` = user's \`user_learning_persona\` when that variant is pedagogically sound; if that variant is weak (e.g. expert mode but material is intro-only), pick the **closest safe** variant and explain in \`selection_rationale\` (one short paragraph).
 7. **Primary markdown**: \`study_note_markdown\` MUST be **byte-for-byte identical** to the selected variant's \`study_note_markdown\` inside \`pedagogy_pack.variants\`.
 8. **Citations**: If SOURCE_ALIGNMENT_TABLE is non-empty, append \`[Video MM:SS / PDF p.N]\` per block in **all three** variants (same anchors).
@@ -78,7 +80,8 @@ const OUTPUT_SCHEMA = `## (4) Output Schema — JSON ONLY (\`schema_version\` **
     "core_learning_objectives": string[],
     "technical_concepts": [ { "concept": string, "why": string, "how": string } ],
     "key_takeaways": string[],
-    "cot_reasoning": string
+    "cot_reasoning": string,
+    "reasoning_rationale": string
   },
   "study_note_markdown": string,
   "self_check": {

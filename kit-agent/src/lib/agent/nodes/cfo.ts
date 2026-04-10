@@ -84,8 +84,7 @@ export async function cfoAfterDistillNode(state: AgentState) {
   const nextAcc = nextAccumulated(state, deltaUsd);
   const inj = state.lastPromptInjectionMetrics;
   const finOps = computeTokenEfficiencyEngine({
-    modelId: u.modelId,
-    actualInputTokens: u.inputTokens,
+    usage: u,
     injection: inj,
   });
   const injectionNote =
@@ -93,7 +92,7 @@ export async function cfoAfterDistillNode(state: AgentState) {
       ? ` {{PERSONA_INSTRUCTION}} 주입: 중복 블록 ${inj.duplicateBlocksAvoided}회 회피 추정 → 약 ${inj.estimatedSavedTokens} 토큰 절감(입력 프롬프트 기준 시뮬).`
       : "";
   const finOpsNote = finOps
-    ? ` Token Efficiency Engine: hypothetical full-input ${finOps.traditionalTokens} tok vs optimized ${finOps.optimizedTokens} tok (~${finOps.savingsPercentage}% savings, ~$${finOps.dollarsSaved.toFixed(4)} input delta).`
+    ? ` Token Efficiency Engine: projected ${finOps.estimated_savings.traditionalTokens}→${finOps.estimated_savings.optimizedTokens} tok (~${finOps.estimated_savings.savingsPercentage}%), measured ${finOps.measured_performance ? `${finOps.measured_performance.traditionalTokens}→${finOps.measured_performance.optimizedTokens} tok (~${finOps.measured_performance.savingsPercentage}%)` : "N/A"}`
     : "";
   return {
     interruptRequired: false,
@@ -122,7 +121,7 @@ export async function cfoAfterDistillNode(state: AgentState) {
         from: "CFO_Agent",
         to: "Validator_Agent",
         taskDone: `Booked distill step ~$${deltaUsd.toFixed(4)}; run burn ~$${nextAcc.toFixed(4)}.`,
-        keyFindings: `Tokens in+out=${tokens}; model=${u.modelId}.${inj ? ` Est. ~${inj.estimatedSavedTokens} input tok saved via persona slot injection.` : ""}${finOps ? ` FinOps: ${finOps.savingsPercentage}% input-token savings vs hypothetical full prompt.` : ""}`,
+        keyFindings: `Tokens in+out=${tokens}; model=${u.modelId}.${inj ? ` Est. ~${inj.estimatedSavedTokens} input tok saved via persona slot injection.` : ""}${finOps ? ` FinOps projected=${finOps.estimated_savings.savingsPercentage}%, measured=${finOps.measured_performance?.savingsPercentage ?? "N/A"}%.` : ""}`,
         nextAction: "Validator: emit JSON verdict + rewrite hints if <9.",
         terminalLine: `CFO_Agent: Logged distill cost $${deltaUsd.toFixed(4)} (${tokens} tok).${inj ? ` Injection ~${inj.estimatedSavedTokens} tok saved (est.).` : ""}`,
         structured: {

@@ -37,6 +37,10 @@ import {
   type PrivacyTerminalPhase,
 } from "@/components/privacy-security-terminal";
 import { pickVideoSynthesisEngagementLine } from "@/lib/avatar/video-synthesis-engagement";
+import {
+  SECURITY_AUDIT_RECEIPT_STORAGE_KEY,
+  type DeletionReceipt,
+} from "@/lib/security/deletion-receipt";
 
 type StylePreset = "3d_animation" | "cel_anime" | "flat_vector";
 
@@ -70,6 +74,12 @@ export function AvatarLecturePanel() {
     privacyGateRequired?: boolean;
   } | null>(null);
   const [privacyAckSent, setPrivacyAckSent] = useState(false);
+  const [sourcePhotoMeta, setSourcePhotoMeta] = useState<{
+    filename: string;
+    sizeBytes: number;
+    mimeType: string;
+    lastModifiedMs: number;
+  } | null>(null);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [masterSynthMsg, setMasterSynthMsg] = useState<string | null>(null);
   const [renderSynthMsg, setRenderSynthMsg] = useState<string | null>(null);
@@ -148,6 +158,12 @@ export function AvatarLecturePanel() {
         if (!data.url) throw new Error("URL 없음");
         setMasterUrl(data.url);
         setMasterSynthMsg(data.userMessage?.trim() || null);
+        setSourcePhotoMeta({
+          filename: f.name,
+          sizeBytes: f.size,
+          mimeType: f.type || "application/octet-stream",
+          lastModifiedMs: f.lastModified || 0,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "오류");
       } finally {
@@ -298,15 +314,35 @@ export function AvatarLecturePanel() {
       const res = await fetch("/api/avatar/lecture/privacy-ack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({
+          jobId,
+          ...(sourcePhotoMeta
+            ? {
+                deletedFileMetadata: {
+                  ...sourcePhotoMeta,
+                  source: "avatar-lecture-upload",
+                },
+              }
+            : {}),
+        }),
       });
-      const data = (await res.json()) as { error?: string; ok?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        ok?: boolean;
+        deletion_receipt?: DeletionReceipt | null;
+      };
       if (!res.ok) throw new Error(data.error || "확인 실패");
       setPrivacyAckSent(true);
+      if (data.deletion_receipt) {
+        window.localStorage.setItem(
+          SECURITY_AUDIT_RECEIPT_STORAGE_KEY,
+          JSON.stringify(data.deletion_receipt),
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류");
     }
-  }, [jobId]);
+  }, [jobId, sourcePhotoMeta]);
 
   const toggleFullscreen = useCallback(() => {
     const el = wrapRef.current;

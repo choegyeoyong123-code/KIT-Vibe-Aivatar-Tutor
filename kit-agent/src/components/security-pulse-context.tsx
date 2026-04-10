@@ -2,12 +2,14 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import type { SecurityPulseSnapshot } from "@/lib/security-pulse-state";
+import type { DeletionReceipt } from "@/lib/security/deletion-receipt";
 
 const defaultSnapshot: SecurityPulseSnapshot = {
   phase: "idle",
@@ -17,19 +19,30 @@ const defaultSnapshot: SecurityPulseSnapshot = {
 type Ctx = {
   snapshot: SecurityPulseSnapshot;
   setSnapshot: (s: SecurityPulseSnapshot) => void;
+  setDeletionReceipt: (r: DeletionReceipt | null) => void;
 };
 
 const SecurityPulseContext = createContext<Ctx | null>(null);
 
 export function SecurityPulseProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<SecurityPulseSnapshot>(defaultSnapshot);
+  const setDeletionReceipt = useCallback((r: DeletionReceipt | null) => {
+    setSnapshot((prev) => ({ ...prev, deletion_receipt: r }));
+  }, []);
+  const setSnapshotMerged = useCallback((s: SecurityPulseSnapshot) => {
+    setSnapshot((prev) => ({
+      ...s,
+      deletion_receipt: s.deletion_receipt ?? prev.deletion_receipt ?? null,
+    }));
+  }, []);
 
   const value = useMemo(
     () => ({
       snapshot,
-      setSnapshot,
+      setSnapshot: setSnapshotMerged,
+      setDeletionReceipt,
     }),
-    [snapshot],
+    [snapshot, setSnapshotMerged, setDeletionReceipt],
   );
 
   return (

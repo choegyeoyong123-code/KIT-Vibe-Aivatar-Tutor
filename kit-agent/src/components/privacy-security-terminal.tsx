@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Shield } from "lucide-react";
+import { formatTimestamp } from "@/lib/format-timestamp";
 
 export type PrivacyTerminalPhase = "idle" | "processing" | "complete";
 
@@ -16,12 +17,7 @@ export interface PrivacyLogLine {
 const GUARDIAN_PREFIX = "[Security Guardian]";
 
 function formatTime(d: Date) {
-  return d.toLocaleTimeString("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+  return formatTimestamp(d);
 }
 
 const BOOT_SEQUENCE: Omit<PrivacyLogLine, "at">[] = [

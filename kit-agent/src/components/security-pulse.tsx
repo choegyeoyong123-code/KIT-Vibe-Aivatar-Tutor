@@ -6,6 +6,10 @@ import { Lock, Shield, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSecurityPulse } from "@/components/security-pulse-context";
 import type { SecurityPulsePhase } from "@/lib/security-pulse-state";
+import {
+  SECURITY_AUDIT_RECEIPT_STORAGE_KEY,
+  type DeletionReceipt,
+} from "@/lib/security/deletion-receipt";
 
 function RippleBurst({ burstKey }: { burstKey: number }) {
   return (
@@ -119,10 +123,22 @@ const COPY: Record<
 };
 
 export function SecurityPulse() {
-  const { snapshot } = useSecurityPulse();
-  const { phase, isPhotoDeleted } = snapshot;
+  const { snapshot, setDeletionReceipt } = useSecurityPulse();
+  const { phase, isPhotoDeleted, deletion_receipt } = snapshot;
   const copy = COPY[phase];
   const [rippleEpoch, setRippleEpoch] = useState(0);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SECURITY_AUDIT_RECEIPT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as DeletionReceipt;
+      if (parsed?.unique_audit_signature && parsed?.file_hash) {
+        setDeletionReceipt(parsed);
+      }
+    } catch {
+      // ignore parse/storage errors
+    }
+  }, [setDeletionReceipt]);
   useEffect(() => {
     if (phase === "success") setRippleEpoch((n) => n + 1);
   }, [phase]);
@@ -171,6 +187,35 @@ export function SecurityPulse() {
           <p className="font-mono text-[10px] text-slate-500 dark:text-slate-500">
             Security_Guardian trace · isPhotoDeleted={String(isPhotoDeleted)}
           </p>
+          <details className="mt-2 rounded-xl border border-emerald-500/30 bg-emerald-50/60 p-2.5 dark:border-emerald-700/50 dark:bg-emerald-950/20">
+            <summary className="cursor-pointer list-none font-mono text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+              Audit Receipt (technical)
+            </summary>
+            {deletion_receipt ? (
+              <dl className="mt-2 space-y-1.5 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+                <div>
+                  <dt className="text-slate-500">file_hash (sha256)</dt>
+                  <dd className="break-all">{deletion_receipt.file_hash}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">deletion_timestamp</dt>
+                  <dd>{deletion_receipt.deletion_timestamp}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">api_response_id</dt>
+                  <dd>{deletion_receipt.api_response_id}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">unique_audit_signature</dt>
+                  <dd className="break-all">{deletion_receipt.unique_audit_signature}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="mt-2 font-mono text-[10px] text-slate-500">
+                receipt unavailable — submit Privacy Protocol ack in Avatar Lecture flow.
+              </p>
+            )}
+          </details>
         </div>
       </div>
     </div>

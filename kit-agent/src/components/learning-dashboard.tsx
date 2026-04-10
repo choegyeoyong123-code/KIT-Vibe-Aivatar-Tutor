@@ -23,6 +23,7 @@ import type { PrivacyTerminalPhase } from "@/components/privacy-security-termina
 import { AgentTraceTerminal } from "@/components/dashboard/agent-trace-terminal";
 import { CharacterDressingOverlay } from "@/components/dashboard/character-dressing-overlay";
 import { SummaryStreamSkeleton } from "@/components/dashboard/summary-stream-skeleton";
+import { SafeHydration } from "@/components/safe-hydration";
 import { TrustInnovationSection } from "@/components/trust-innovation-section";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -77,6 +78,24 @@ import { computeSecurityPulseSnapshot } from "@/lib/security-pulse-state";
 
 /** UI 미터 스케일 (USD) */
 const COST_METER_MAX_USD = 1;
+
+/** 서버·클라이언트 동일 출력(하이드레이션 안전) — 트레이스 ISO 시각 표시 */
+const GUARDIAN_TRACE_CLOCK = new Intl.DateTimeFormat("ko-KR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Seoul",
+});
+
+function formatGuardianTraceTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return GUARDIAN_TRACE_CLOCK.format(d);
+}
+
+/** 데모용 합성 로그 — 렌더 시점 시계를 쓰면 SSR/CSR 1초 차이로 하이드레이션 실패 */
+const GUARDIAN_SYNTHETIC_TIME = "—";
 
 type VideoCtx = Record<string, { transcript: string; visualCues: string }>;
 
@@ -392,23 +411,16 @@ export function LearningDashboard() {
 
   const guardianFeed = useMemo(() => {
     const rows: { key: string; time: string; text: string; kind: "info" | "warn" | "alert" }[] = [];
-    const now = () =>
-      new Date().toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      });
     rows.push({
       key: "g-boot",
-      time: now(),
+      time: GUARDIAN_SYNTHETIC_TIME,
       kind: "info",
       text: "[Security Guardian] Zero-trust 업로드 채널 — 정적 분석 대기",
     });
     if (loading || resumeLoading) {
       rows.push({
         key: "g-run",
-        time: now(),
+        time: GUARDIAN_SYNTHETIC_TIME,
         kind: "warn",
         text: "[Security Guardian] 에이전트 샌드박스 실행 · I/O 격리 유지",
       });
@@ -425,12 +437,7 @@ export function LearningDashboard() {
         e.message.length > 140 ? `${e.message.slice(0, 137)}…` : e.message;
       rows.push({
         key: `${e.at}-${e.phase}`,
-        time: new Date(e.at).toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        }),
+        time: formatGuardianTraceTime(e.at),
         kind: e.phase === "admin" ? "alert" : "info",
         text: `[${e.phase}] ${clip}`,
       });
@@ -530,7 +537,25 @@ export function LearningDashboard() {
   ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-[oklch(0.97_0.02_264)] dark:to-[oklch(0.16_0.03_264)]">
+    <SafeHydration
+      fallback={
+        <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-[oklch(0.97_0.02_264)] dark:to-[oklch(0.16_0.03_264)]">
+          <div className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col overflow-hidden p-4 md:p-6">
+            <div className="grid gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="rounded-xl border bg-card/40 p-4">
+                <div className="mb-3 h-4 w-40 animate-pulse rounded bg-muted/70" />
+                <div className="h-24 animate-pulse rounded bg-muted/50" />
+              </div>
+              <div className="space-y-4">
+                <div className="h-48 animate-pulse rounded-xl border bg-card/40" />
+                <div className="h-64 animate-pulse rounded-xl border bg-card/40" />
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-[oklch(0.97_0.02_264)] dark:to-[oklch(0.16_0.03_264)]">
       <div className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col overflow-hidden md:flex-row">
         <aside className="border-border bg-card/50 flex max-h-[min(52vh,440px)] w-full shrink-0 flex-col gap-4 overflow-y-auto border-b p-4 backdrop-blur-sm md:max-h-none md:w-80 md:border-b-0 md:border-r md:p-5">
           <div className="space-y-2">
@@ -1076,6 +1101,16 @@ export function LearningDashboard() {
                 state.pedagogyPack.variants &&
                 state.pedagogyPack.variants.length > 0 ? (
                   <div className="mt-4 border-t border-border pt-4">
+                    {state?.distilledData?.reasoning_rationale?.trim() ? (
+                      <div className="mb-3 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/5 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">
+                          Reasoning Rationale
+                        </p>
+                        <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+                          {state.distilledData.reasoning_rationale}
+                        </p>
+                      </div>
+                    ) : null}
                     <p className="mb-2 font-medium text-sm">페르소나별 요약 (동일 근거)</p>
                     <Tabs defaultValue={state.pedagogyPack.selected_persona_id}>
                       <TabsList className="mb-2 h-auto w-full flex-wrap gap-1">
@@ -1284,6 +1319,7 @@ export function LearningDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SafeHydration>
   );
 }

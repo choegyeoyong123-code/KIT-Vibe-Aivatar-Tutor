@@ -28,6 +28,10 @@ function formatDistilledDataBlock(data: DistilledData | null | undefined): strin
     lines.push("### cot_reasoning (요약)");
     lines.push(data.cot_reasoning.trim());
   }
+  if (data.reasoning_rationale.trim()) {
+    lines.push("### reasoning_rationale (근거 기반 결정 요약)");
+    lines.push(data.reasoning_rationale.trim());
+  }
   return lines.join("\n");
 }
 

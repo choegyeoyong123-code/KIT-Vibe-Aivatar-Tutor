@@ -3,12 +3,15 @@ import {
   getAvatarLectureJob,
   saveAvatarLectureJob,
 } from "@/lib/avatar/lecture-job-store";
+import { createDeletionReceipt } from "@/lib/security/deletion-receipt-server";
+import type { DeletedFileMetadata } from "@/lib/security/deletion-receipt";
 import { rateLimitExceededResponse } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
 interface Body {
   jobId: string;
+  deletedFileMetadata?: DeletedFileMetadata;
 }
 
 /**
@@ -34,12 +37,25 @@ export async function POST(req: NextRequest) {
     saveAvatarLectureJob(jobId, {
       ...job,
       userPhotoDeletionAcknowledged: true,
+      deletedFileMetadata: body.deletedFileMetadata,
+      deletionReceipt: createDeletionReceipt({
+        contextId: jobId,
+        fileMeta: {
+          filename: body.deletedFileMetadata?.filename ?? "unknown",
+          sizeBytes: body.deletedFileMetadata?.sizeBytes ?? 0,
+          mimeType: body.deletedFileMetadata?.mimeType ?? "application/octet-stream",
+          lastModifiedMs: body.deletedFileMetadata?.lastModifiedMs ?? 0,
+          source: body.deletedFileMetadata?.source ?? "client-device",
+        },
+      }),
     });
+    const updated = getAvatarLectureJob(jobId);
     return NextResponse.json({
       ok: true,
       jobId,
       userPhotoDeletionAcknowledged: true,
       security_check: "PASSED" as const,
+      deletion_receipt: updated?.deletionReceipt ?? null,
     });
   } catch (e) {
     console.error(e);

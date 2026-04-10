@@ -29,15 +29,40 @@ function resolveGoogleModel(tier: ActiveModelTier): string {
   return process.env.GOOGLE_MODEL ?? "gemini-1.5-pro";
 }
 
+function readCachedTokens(u: Record<string, unknown> | undefined): number {
+  if (!u) return 0;
+  const candidates = [
+    (u.prompt_tokens_details as { cached_tokens?: unknown } | undefined)?.cached_tokens,
+    (u.promptTokensDetails as { cachedTokens?: unknown } | undefined)?.cachedTokens,
+    (u.input_token_details as { cache_read?: unknown } | undefined)?.cache_read,
+    (u.inputTokenDetails as { cacheRead?: unknown } | undefined)?.cacheRead,
+    u.cached_tokens,
+    u.cachedTokens,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "number" && Number.isFinite(c) && c >= 0) return c;
+  }
+  return 0;
+}
+
 function readUsage(
-  res: { usage_metadata?: { input_tokens?: number; output_tokens?: number } },
+  res: { usage_metadata?: Record<string, unknown> },
   modelId: string,
+  executionTimeMs?: number,
 ): LlmUsageRecord {
   const u = res.usage_metadata;
   return {
-    inputTokens: u?.input_tokens ?? 0,
-    outputTokens: u?.output_tokens ?? 0,
+    inputTokens:
+      typeof u?.input_tokens === "number" && Number.isFinite(u.input_tokens)
+        ? u.input_tokens
+        : 0,
+    outputTokens:
+      typeof u?.output_tokens === "number" && Number.isFinite(u.output_tokens)
+        ? u.output_tokens
+        : 0,
     modelId,
+    cachedTokensHit: readCachedTokens(u),
+    executionTimeMs,
   };
 }
 
@@ -94,6 +119,7 @@ export async function streamTextTracked(
         ? { modelKwargs: { response_format: { type: "json_object" } } }
         : {}),
     });
+    const started = Date.now();
     const stream = await model.stream([
       new SystemMessage(system),
       new HumanMessage(user),
@@ -116,9 +142,11 @@ export async function streamTextTracked(
           inputTokens: u.input_tokens ?? lastUsage.inputTokens,
           outputTokens: u.output_tokens ?? lastUsage.outputTokens,
           modelId,
+          cachedTokensHit: readCachedTokens(u as unknown as Record<string, unknown>),
         };
       }
     }
+    lastUsage.executionTimeMs = Date.now() - started;
     return { text, usage: lastUsage };
   }
   if (p === "google") {
@@ -127,6 +155,7 @@ export async function streamTextTracked(
       model: modelId,
       temperature: 0.2,
     });
+    const started = Date.now();
     const stream = await model.stream([
       new SystemMessage(system),
       new HumanMessage(user),
@@ -149,9 +178,11 @@ export async function streamTextTracked(
           inputTokens: u.input_tokens ?? lastUsage.inputTokens,
           outputTokens: u.output_tokens ?? lastUsage.outputTokens,
           modelId,
+          cachedTokensHit: readCachedTokens(u as unknown as Record<string, unknown>),
         };
       }
     }
+    lastUsage.executionTimeMs = Date.now() - started;
     return { text, usage: lastUsage };
   }
   const text = mockComplete(system, user, options?.jsonMode);
@@ -163,7 +194,7 @@ export async function streamTextTracked(
   const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
   return {
     text,
-    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId },
+    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 12 },
   };
 }
 
@@ -186,13 +217,14 @@ export async function completeTextTracked(
         ? { modelKwargs: { response_format: { type: "json_object" } } }
         : {}),
     });
+    const started = Date.now();
     const res = await model.invoke([
       new SystemMessage(system),
       new HumanMessage(user),
     ]);
     const text =
       typeof res.content === "string" ? res.content : JSON.stringify(res.content);
-    return { text, usage: readUsage(res, modelId) };
+    return { text, usage: readUsage(res, modelId, Date.now() - started) };
   }
   if (p === "google") {
     const modelId = resolveGoogleModel(tier);
@@ -209,19 +241,20 @@ export async function completeTextTracked(
           }
         : {}),
     });
+    const started = Date.now();
     const res = await model.invoke([
       new SystemMessage(system),
       new HumanMessage(user),
     ]);
     const text =
       typeof res.content === "string" ? res.content : JSON.stringify(res.content);
-    return { text, usage: readUsage(res, modelId) };
+    return { text, usage: readUsage(res, modelId, Date.now() - started) };
   }
   const text = mockComplete(system, user, options?.jsonMode);
   const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
   return {
     text,
-    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId },
+    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 10 },
   };
 }
 
@@ -393,6 +426,8 @@ function mockComplete(system: string, user: string, jsonMode?: boolean): string 
           ],
           cot_reasoning:
             "1) 목표 추출 2) 용어 인벤토리 3) Why/How 정리 4) 갭 스캔 5) 마크다운 초안 6) 인용 7) self_check.",
+          reasoning_rationale:
+            "학습자 페르소나가 standard_kit으로 지정되어 구조적 밀도를 우선했습니다. MASTER CONTEXT에서 반복 등장한 멀티모달 증류·검증 루프를 핵심 축으로 배치했고, 원자료에 없는 심화 항목은 명시적으로 제한해 학습 혼선을 줄였습니다.",
         },
         study_note_markdown: mdStandard,
         self_check: {
