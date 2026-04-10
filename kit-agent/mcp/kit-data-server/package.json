@@ -1,0 +1,15 @@
+{
+  "name": "kit-data-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "KIT internal data access via MCP — no raw SQL rows in LLM context",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  }
+}
