@@ -74,7 +74,7 @@ Upstash를 켜 두면 레이트 리밋이 모든 서버리스 인스턴스에서
 저장소 루트의 `vercel.json`은 기본적으로 **서울 리전(`icn1`)** 을 사용하도록 설정되어 있습니다. 다른 리전이 필요하면 `regions`를 변경하세요.
 
 - **`/api/warmup`**: 서버리스에서 LangGraph·LLM 번들을 미리 로드해 콜드 스타트를 줄입니다. 수동으로 `GET /api/warmup` 또는 `GET /health`(동일 동작)을 호출해도 됩니다.
-- **Cron**: 약 8분마다 `/api/warmup`을 호출하도록 설정되어 있습니다. 플랜에 따라 Cron이 비활성화일 수 있으면 대시보드에서 Cron을 끄거나 `vercel.json`의 `crons` 항목을 제거해도 앱 동작에는 영향이 없습니다.
+- **Cron(미사용)**: Vercel **Hobby** 플랜은 Cron을 **하루 1회**로 제한하므로, `*/8 * * * *` 같은 고빈도 스케줄은 배포 검증 단계에서 차단됩니다. 이 저장소의 `vercel.json`에는 **`crons`를 넣지 않습니다**. 주기 워밍이 필요하면 외부 모니터(Uptime 등)로 `GET /health`를 일 1회 이하로 호출하거나, **Pro** 이상에서만 Vercel Cron을 검토하세요.
 
 ### Progressive Learning 스트림 (`/api/agent/run-stream`)
 
