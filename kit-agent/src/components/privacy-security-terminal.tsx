@@ -45,10 +45,10 @@ export function PrivacySecurityTerminal({
   const levelClass = useMemo(
     () =>
       ({
-        INFO: "text-sky-300/95",
-        WARN: "text-amber-300/95",
-        SUCCESS: "text-emerald-300/95",
-        VERIFIED: "text-violet-300/95",
+        INFO: "text-sky-700",
+        WARN: "text-amber-700",
+        SUCCESS: "text-emerald-700",
+        VERIFIED: "text-violet-700",
       }) satisfies Record<LogLevel, string>,
     [],
   );
@@ -130,13 +130,13 @@ export function PrivacySecurityTerminal({
 
   return (
     <section
-      className="rounded-xl border border-emerald-500/25 bg-zinc-950 font-mono text-xs text-zinc-200 shadow-[inset_0_1px_0_0_rgba(52,211,153,0.08)]"
+      className="rounded-xl border border-emerald-200 bg-white font-mono text-xs text-slate-800 shadow-sm"
       aria-label="Privacy and security activity"
     >
-      <header className="flex items-center gap-2 border-b border-zinc-800 px-3 py-2 text-[11px] tracking-wide text-emerald-400/90">
-        <Shield className="size-3.5 shrink-0" />
+      <header className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-[11px] tracking-wide text-emerald-800">
+        <Shield className="size-3.5 shrink-0" aria-hidden />
         <span className="uppercase">{title}</span>
-        <span className="ml-auto text-zinc-500">simulated / demo-grade audit trail</span>
+        <span className="ml-auto text-slate-500">simulated / demo-grade audit trail</span>
       </header>
       <div
         ref={viewport}
@@ -145,9 +145,9 @@ export function PrivacySecurityTerminal({
         <ul className="space-y-1.5 pr-2">
           {lines.map((line, idx) => (
             <li key={`${line.at}-${idx}`} className="break-words leading-relaxed">
-              <span className="text-zinc-500">{line.at}</span>{" "}
+              <span className="text-slate-500">{line.at}</span>{" "}
               <span className={levelClass[line.level]}>[{line.level}]</span>{" "}
-              <span className="text-zinc-100/90">{line.message}</span>
+              <span className="text-slate-800">{line.message}</span>
             </li>
           ))}
         </ul>

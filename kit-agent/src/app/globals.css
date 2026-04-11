@@ -49,34 +49,40 @@
 }
 
 :root {
-  /* KIT-inspired AI-native accents (tech-forward, contest UI) */
-  --kit-brand: oklch(0.42 0.17 264);
-  --kit-glow: oklch(0.72 0.13 195);
+  /* KIT — Duolingo-style: 순백 베이스, 에메랄드 주 액션, 사이안 보조 */
+  --kit-brand: #1cb0f6;
+  --kit-glow: #58cc02;
   --kit-magenta: oklch(0.62 0.22 320);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --kit-surface-line: #f3f4f6;
+  --kit-text-chunky: #4b4b4b;
+  --kit-chunky-green: #58cc02;
+  --kit-cyan-tactile: #1cb0f6;
+  --background: #ffffff;
+  --foreground: #4b4b4b;
+  --card: #ffffff;
+  --card-foreground: #4b4b4b;
+  --popover: #ffffff;
+  --popover-foreground: #4b4b4b;
+  /* shadcn primary = 메인 CTA (듀오링고 그린) */
+  --primary: #58cc02;
+  --primary-foreground: #ffffff;
+  --secondary: #f9fafb;
+  --secondary-foreground: #4b4b4b;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #4b4b4b;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #f3f4f6;
+  --input: #e5e7eb;
+  --ring: #58cc02;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  /* 조금 더 둥근 카드/버튼 (듀오링고 느낌) */
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -91,7 +97,8 @@
   --kit-brand: oklch(0.62 0.18 264);
   --kit-glow: oklch(0.78 0.11 195);
   --kit-magenta: oklch(0.7 0.2 320);
-  --background: oklch(0.145 0 0);
+  /* Deep slate base — glass cards read clearly on top */
+  --background: oklch(0.09 0.02 264);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -129,9 +136,82 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white antialiased;
+    color: var(--kit-text-chunky);
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* 공통 패널 — 페이지 곳곳에서 동일한 화이트 카드 룩 */
+@layer components {
+  .kit-panel {
+    @apply rounded-2xl border-2 border-gray-100 bg-white text-[#4B4B4B];
+  }
+  .kit-panel-muted {
+    @apply rounded-2xl border-2 border-gray-100 bg-[#FAFAFA] text-[#4B4B4B];
+  }
+}
+
+/* Security Pulse panel — vertical log stream (duplicated content, -50% loop) */
+@keyframes dashboard-audit-stream {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.dashboard-audit-stream {
+  animation: dashboard-audit-stream 28s linear infinite;
+}
+
+/* FinOps — 비용 절감 엔진 바 반짝임 */
+@keyframes finops-bar-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.finops-bar-shimmer {
+  animation: finops-bar-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes finops-success-glow {
+  0%,
+  100% {
+    opacity: 0.75;
+    box-shadow: 0 0 12px -2px rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px 0 rgba(16, 185, 129, 0.45);
+  }
+}
+
+.finops-success-glow {
+  animation: finops-success-glow 2s ease-in-out infinite;
+}
+
+.dashboard-audit-stream--mask {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
 }

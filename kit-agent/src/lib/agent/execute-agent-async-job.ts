@@ -25,6 +25,9 @@ export async function executeAgentAsyncJob(jobId: string): Promise<void> {
         learningPersona: job.learningPersona,
         studentDisplayName: job.studentDisplayName,
         currentPersonaId: job.galleryPersonaId,
+        educationalPersonaSystemPrompt: job.educationalPersonaSystemPrompt ?? "",
+        activeModelTier: job.activeModelTier ?? "standard",
+        vendorModelId: job.vendorModelId ?? "",
       },
       { configurable: { thread_id: job.threadId } },
     );

@@ -46,8 +46,9 @@ function useAnimatedInt(target: number, active: boolean) {
     mv.set(0);
     const c = animate(mv, target, {
       type: "spring",
-      stiffness: 120,
-      damping: 20,
+      stiffness: 140,
+      damping: 24,
+      mass: 0.85,
     });
     return () => c.stop();
   }, [active, target, mv]);
@@ -118,7 +119,7 @@ export function TokenSavingsReport({
         animate={{ opacity: open ? 1 : 0 }}
         transition={{ duration: 0.2 }}
         className={cn(
-          "fixed inset-0 z-[100] bg-slate-950/55 backdrop-blur-[2px]",
+          "fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-[2px]",
           !open && "pointer-events-none",
         )}
         style={{ visibility: open ? "visible" : "hidden" }}
@@ -132,32 +133,32 @@ export function TokenSavingsReport({
         animate={{ x: open ? 0 : "104%" }}
         transition={{ type: "spring", stiffness: 320, damping: 34 }}
         className={cn(
-          "fixed top-0 right-0 z-[101] flex h-[100dvh] w-full max-w-[min(100vw,28rem)] flex-col border-l border-slate-200/80 bg-[#f8fafc] shadow-2xl dark:border-slate-800 dark:bg-slate-950",
+          "fixed top-0 right-0 z-[101] flex h-[100dvh] w-full max-w-[min(100vw,28rem)] flex-col border-l border-slate-100 bg-white shadow-xl",
           !open && "pointer-events-none",
         )}
         style={{ visibility: open ? "visible" : "hidden" }}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200/90 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-6 py-5">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
               FinOps · CFO 연동
             </p>
             <h2
               id={titleId}
-              className="mt-1 font-bold text-xl tracking-tight text-slate-900 dark:text-slate-50"
+              className="mt-1 font-semibold text-xl tracking-tight text-cyan-700"
             >
               Token Savings Report
             </h2>
-            <p className="mt-1 text-pretty text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+            <p className="mt-1 text-pretty text-xs leading-relaxed text-slate-600">
               {"{{PERSONA_INSTRUCTION}}"} 슬롯으로 페르소나 블록 중복 전송을 줄인 효과를 CFO 추정치로
               시각화합니다.
             </p>
           </div>
-          <Button
+            <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="shrink-0 rounded-full"
+            className="shrink-0 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800"
             onClick={() => onOpenChange(false)}
             aria-label="닫기"
           >
@@ -165,38 +166,39 @@ export function TokenSavingsReport({
           </Button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 space-y-6">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
           {finOps ? (
-            <section className="rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50 to-orange-50/90 p-4 shadow-sm dark:border-amber-900/50 dark:from-amber-950/40 dark:to-orange-950/30">
-              <div className="flex items-center gap-2 text-amber-900 text-xs font-semibold uppercase tracking-wide dark:text-amber-200/95">
+            <section className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/50 p-5 shadow-sm">
+              <div className="pointer-events-none absolute -right-6 -top-6 size-28 rounded-full bg-amber-200/40 blur-2xl" />
+              <div className="relative flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
                 <Zap className="size-3.5" aria-hidden />
                 CFO · Token Efficiency Engine
               </div>
-              <p className="mt-3 text-pretty text-sm font-medium leading-relaxed text-amber-950 dark:text-amber-50">
+              <p className="relative mt-3 text-pretty text-sm font-medium leading-relaxed text-slate-800">
                 {finOps.efficiencySummary}
               </p>
-              <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Hypothetical full input</dt>
-                  <dd className="font-mono font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+              <dl className="relative mt-4 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-lg border border-slate-100 bg-white px-2.5 py-2 shadow-sm">
+                  <dt className="text-slate-500">Hypothetical full input</dt>
+                  <dd className="font-mono font-semibold text-slate-800 tabular-nums">
                     {finOps.estimated_savings.traditionalTokens.toLocaleString("ko-KR")} tok
                   </dd>
                 </div>
-                <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Projected optimized input</dt>
-                  <dd className="font-mono font-semibold text-emerald-800 tabular-nums dark:text-emerald-300">
+                <div className="rounded-lg border border-slate-100 bg-white px-2.5 py-2 shadow-sm">
+                  <dt className="text-slate-500">Projected optimized input</dt>
+                  <dd className="font-mono font-semibold tabular-nums text-emerald-700">
                     {finOps.estimated_savings.optimizedTokens.toLocaleString("ko-KR")} tok
                   </dd>
                 </div>
-                <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Projected efficiency</dt>
-                  <dd className="font-mono font-semibold text-amber-900 tabular-nums dark:text-amber-100">
+                <div className="rounded-lg border border-slate-100 bg-white px-2.5 py-2 shadow-sm">
+                  <dt className="text-slate-500">Projected efficiency</dt>
+                  <dd className="font-mono font-semibold tabular-nums text-amber-800">
                     {finOps.estimated_savings.savingsPercentage}%
                   </dd>
                 </div>
-                <div className="rounded-lg bg-white/80 px-2.5 py-2 dark:bg-slate-900/60">
-                  <dt className="text-slate-500 dark:text-slate-400">Measured reality</dt>
-                  <dd className="font-mono font-semibold text-slate-900 tabular-nums dark:text-slate-100">
+                <div className="rounded-lg border border-slate-100 bg-white px-2.5 py-2 shadow-sm">
+                  <dt className="text-slate-500">Measured reality</dt>
+                  <dd className="font-mono font-semibold tabular-nums text-slate-800">
                     {finOps.measured_performance
                       ? `${finOps.measured_performance.savingsPercentage}%`
                       : "N/A"}
@@ -204,7 +206,7 @@ export function TokenSavingsReport({
                 </div>
               </dl>
               {finOps.measured_performance ? (
-                <p className="mt-3 text-[11px] text-slate-600 dark:text-slate-400">
+                <p className="relative mt-3 text-[11px] text-slate-600">
                   actual_input_tokens={finOps.measured_performance.metrics.actual_input_tokens.toLocaleString("ko-KR")}
                   {" · "}
                   cached_tokens_hit={finOps.measured_performance.metrics.cached_tokens_hit.toLocaleString("ko-KR")}
@@ -233,11 +235,11 @@ export function TokenSavingsReport({
                 />
               </div>
               {reasoningRationale ? (
-                <div className="mt-4 rounded-xl border border-amber-200/80 bg-white/75 p-3 dark:border-amber-900/40 dark:bg-slate-900/60">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                <div className="relative mt-4 rounded-xl border border-amber-200 bg-white/80 p-3 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900">
                     Reasoning Rationale
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p className="mt-1 text-xs leading-relaxed text-slate-700">
                     {reasoningRationale}
                   </p>
                 </div>
@@ -245,49 +247,50 @@ export function TokenSavingsReport({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-              <Coins className="size-3.5" aria-hidden />
+          <section className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="pointer-events-none absolute -right-8 top-0 size-32 rounded-full bg-emerald-100/70 blur-3xl" />
+            <div className="relative flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <Coins className="size-3.5 text-emerald-600" aria-hidden />
               Cumulative savings
             </div>
-            <div className="mt-3 flex flex-wrap items-end gap-2">
-              <span className="font-mono font-bold text-4xl tabular-nums text-emerald-600 dark:text-emerald-400">
+            <div className="relative mt-3 flex flex-wrap items-end gap-2">
+              <span className="font-mono font-bold text-4xl tabular-nums text-emerald-700">
                 {displayTotal.toLocaleString("ko-KR")}
               </span>
-              <span className="pb-1.5 text-sm font-medium text-slate-500">tokens (est.)</span>
+              <span className="pb-1.5 text-sm font-medium text-slate-600">tokens (est.)</span>
             </div>
-            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+            <p className="relative mt-2 text-xs text-slate-600">
               누적 실행 {cumulativeRunsRecorded}회 반영 · 입력 프롬프트 기준 절감 추정
             </p>
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm dark:bg-emerald-950/40">
-              <span className="flex items-center gap-1.5 font-medium text-emerald-900 dark:text-emerald-100">
+            <div className="relative mt-4 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-900">
                 <TrendingDown className="size-4" aria-hidden />
                 대략 절감(입력 $/1K 기준)
               </span>
-              <span className="font-mono font-semibold text-emerald-800 dark:text-emerald-300">
+              <span className="font-mono font-semibold text-emerald-800">
                 ~${estSavedUsd.toFixed(4)} USD
               </span>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-              <BarChart3 className="size-3.5" aria-hidden />
+          <section className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <BarChart3 className="size-3.5 text-cyan-600" aria-hidden />
               Prompt strategy comparison
             </div>
             {!breakdown ? (
-              <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 학습 파이프라인을 한 번 실행하면 Knowledge Distiller의{" "}
-                <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">
+                <code className="rounded border border-slate-100 bg-slate-50 px-1 py-0.5 font-mono text-xs text-slate-800">
                   lastPromptInjectionMetrics
                 </code>{" "}
                 가 표시됩니다.
               </p>
             ) : (
               <div className="mt-4 space-y-5">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-600">
                   최근 스냅샷 · 페르소나{" "}
-                  <strong className="text-slate-800 dark:text-slate-200">
+                  <strong className="text-slate-800">
                     {personaLabelKo(livePersona)}
                   </strong>
                 </p>
@@ -307,7 +310,7 @@ export function TokenSavingsReport({
                     tone="emerald"
                   />
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-dashed border-emerald-300/70 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100">
+                <div className="flex items-center gap-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
                   <Sparkles className="size-4 shrink-0" aria-hidden />
                   이 실행에서 페르소나 관련 입력 약{" "}
                   <strong>{breakdown.saved.toLocaleString("ko-KR")} tok</strong> 절감 추정
@@ -316,9 +319,9 @@ export function TokenSavingsReport({
             )}
           </section>
 
-          <section className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wide">
-              <Gauge className="size-3.5" aria-hidden />
+          <section className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <Gauge className="size-3.5 text-violet-600" aria-hidden />
               API efficiency by persona
             </div>
             <ul className="mt-4 space-y-3">
@@ -333,20 +336,22 @@ export function TokenSavingsReport({
                 return (
                   <li
                     key={row.personaId}
-                    className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/60"
+                    className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-2 text-sm">
-                      <span className="font-medium text-slate-800 dark:text-slate-100">
+                      <span className="font-medium text-slate-800">
                         {row.labelKo}
                       </span>
-                      <span className="font-mono text-xs text-slate-600 tabular-nums dark:text-slate-400">
+                      <span className="font-mono text-xs text-slate-600 tabular-nums">
                         {row.savedTokens.toLocaleString("ko-KR")} tok · {row.runs}회
                       </span>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/90 dark:bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500"
-                        style={{ width: `${pct}%` }}
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ type: "spring", stiffness: 260, damping: 32 }}
                       />
                     </div>
                     {row.runs > 0 ? (
@@ -385,25 +390,30 @@ function BarRow({
   const w = Math.min(100, (value / max) * 100);
   const bg =
     tone === "rose"
-      ? "bg-gradient-to-r from-rose-500 to-orange-400"
-      : "bg-gradient-to-r from-emerald-500 to-teal-400";
+      ? "bg-gradient-to-r from-orange-400 to-red-500"
+      : "bg-gradient-to-r from-emerald-400 to-cyan-500";
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
         <div>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</p>
+          <p className="text-sm font-medium text-slate-800">{label}</p>
           <p className="text-[11px] text-slate-500">{sub}</p>
         </div>
-        <span className="font-mono text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">
+        <span className="font-mono text-sm font-semibold tabular-nums text-slate-700">
           {value.toLocaleString("ko-KR")}
         </span>
       </div>
-      <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200/90 dark:bg-slate-800">
+      <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
         <motion.div
-          className={cn("h-full rounded-full", bg)}
+          className={cn(
+            "h-full min-w-0 rounded-full",
+            bg,
+            tone === "emerald" && "shadow-[0_0_20px_-4px_rgba(16,185,129,0.4)]",
+            tone === "rose" && "shadow-[0_0_20px_-4px_rgba(251,146,60,0.35)]",
+          )}
           initial={{ width: 0 }}
           animate={{ width: `${w}%` }}
-          transition={{ type: "spring", stiffness: 200, damping: 26 }}
+          transition={{ type: "spring", stiffness: 260, damping: 32 }}
         />
       </div>
     </div>

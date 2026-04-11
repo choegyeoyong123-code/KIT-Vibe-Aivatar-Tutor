@@ -11,6 +11,8 @@ import {
   parseGalleryPersonaId,
 } from "@/lib/agent/persona/persona-presets";
 import { rateLimitExceededResponse } from "@/lib/security/rate-limit";
+import { parseEducationalPersonaSystemPrompt } from "@/lib/agent/educational-persona-prompt";
+import { mergeModelSelectionFromForm } from "@/lib/agent/merge-run-form-model";
 
 export const runtime = "nodejs";
 /** Strategy 11: 업로드·검증만 수행 — 본 실행은 after() 또는 /jobs/[id]/run */
@@ -34,6 +36,10 @@ export async function POST(req: NextRequest) {
     const galleryPersonaId =
       parseGalleryPersonaId(form.get("galleryPersonaId")) ??
       DEFAULT_DYNAMIC_PERSONA_ID;
+    const educationalPersonaSystemPrompt = parseEducationalPersonaSystemPrompt(
+      form.get("educationalPersonaSystemPrompt"),
+    );
+    const { vendorModelId, activeModelTier } = mergeModelSelectionFromForm(form);
 
     const ingested = await ingestAgentMaterialsFromFormData(form);
     if (!ingested.ok) {
@@ -50,6 +56,9 @@ export async function POST(req: NextRequest) {
       learningPersona,
       studentDisplayName,
       galleryPersonaId,
+      educationalPersonaSystemPrompt,
+      activeModelTier,
+      vendorModelId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

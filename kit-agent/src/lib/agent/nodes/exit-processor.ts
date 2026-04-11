@@ -1,4 +1,4 @@
-import { completeTextTracked } from "@/lib/agent/llm";
+import { completeTextTracked, llmOptionsFromAgentState } from "@/lib/agent/llm";
 import { handoff } from "@/lib/agent/protocol/inter-agent-message";
 import type { AgentState } from "@/lib/agent/state";
 import type { ExitProcessingStrategy } from "@/lib/agent/types";
@@ -125,9 +125,11 @@ export async function exitProcessorNode(state: AgentState) {
     let answer = "";
     let directAnswerErr: string | null = null;
     try {
-      const { text } = await completeTextTracked(DIRECT_ANSWER_SYSTEM, `${context}\n\n## 질문\n${q}`, {
-        tier: state.activeModelTier,
-      });
+      const { text } = await completeTextTracked(
+        DIRECT_ANSWER_SYSTEM,
+        `${context}\n\n## 질문\n${q}`,
+        llmOptionsFromAgentState(state),
+      );
       answer = text;
     } catch (e) {
       directAnswerErr = e instanceof Error ? e.message : String(e);

@@ -1,7 +1,9 @@
+import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { AIMessageChunk } from "@langchain/core/messages";
+import { getVendorModelById } from "@/constants/vendor-models";
 import type { ActiveModelTier } from "@/lib/agent/types";
 import type { LlmUsageRecord } from "@/lib/agent/usage-types";
 import { applyProviderEnvAliases } from "@/lib/bootstrap-env";
@@ -75,6 +77,123 @@ export interface CompleteTextOptions {
   jsonMode?: boolean;
   /** economy → 저비용 모델 (OpenAI: gpt-4o-mini, Google: flash) */
   tier?: ActiveModelTier;
+  /**
+   * 멀티 벤더 셀렉터 — `openai:gpt-4o-mini` 형식. 해당 벤더 API 키가 없으면
+   * `tier` + 환경 기본 프로바이더로 자동 폴백합니다.
+   */
+  vendorModelId?: string;
+}
+
+type BuiltLlmBackend =
+  | { tag: "openai"; model: ChatOpenAI; modelId: string }
+  | { tag: "google"; model: ChatGoogleGenerativeAI; modelId: string }
+  | { tag: "anthropic"; model: ChatAnthropic; modelId: string }
+  | { tag: "mock"; modelId: string };
+
+type LiveLlmBackend = Extract<
+  BuiltLlmBackend,
+  { tag: "openai" | "google" | "anthropic" }
+>;
+
+function buildLlmBackend(options?: CompleteTextOptions): BuiltLlmBackend {
+  const tier = options?.tier ?? "standard";
+  const spec = options?.vendorModelId?.trim()
+    ? getVendorModelById(options.vendorModelId.trim())
+    : undefined;
+
+  if (spec) {
+    if (spec.vendor === "openai" && process.env.OPENAI_API_KEY) {
+      return {
+        tag: "openai",
+        model: new ChatOpenAI({
+          model: spec.apiModelId,
+          temperature: 0.2,
+          ...(options?.jsonMode
+            ? { modelKwargs: { response_format: { type: "json_object" } } }
+            : {}),
+        }),
+        modelId: spec.apiModelId,
+      };
+    }
+    if (spec.vendor === "google" && process.env.GOOGLE_API_KEY) {
+      return {
+        tag: "google",
+        model: new ChatGoogleGenerativeAI({
+          model: spec.apiModelId,
+          temperature: 0.2,
+          ...(options?.jsonMode
+            ? {
+                modelKwargs: {
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                  },
+                },
+              }
+            : {}),
+        }),
+        modelId: spec.apiModelId,
+      };
+    }
+    if (spec.vendor === "anthropic" && process.env.ANTHROPIC_API_KEY) {
+      return {
+        tag: "anthropic",
+        model: new ChatAnthropic({
+          model: spec.apiModelId,
+          temperature: 0.2,
+        }),
+        modelId: spec.apiModelId,
+      };
+    }
+  }
+
+  const p = provider();
+  if (p === "openai") {
+    const modelId = resolveOpenAIModel(tier);
+    return {
+      tag: "openai",
+      model: new ChatOpenAI({
+        model: modelId,
+        temperature: 0.2,
+        ...(options?.jsonMode
+          ? { modelKwargs: { response_format: { type: "json_object" } } }
+          : {}),
+      }),
+      modelId,
+    };
+  }
+  if (p === "google") {
+    const modelId = resolveGoogleModel(tier);
+    return {
+      tag: "google",
+      model: new ChatGoogleGenerativeAI({
+        model: modelId,
+        temperature: 0.2,
+        ...(options?.jsonMode
+          ? {
+              modelKwargs: {
+                generationConfig: {
+                  responseMimeType: "application/json",
+                },
+              },
+            }
+          : {}),
+      }),
+      modelId,
+    };
+  }
+  return { tag: "mock", modelId: tier === "economy" ? "gpt-4o-mini" : "mock" };
+}
+
+/** LangGraph 노드에서 `tier` + `vendorModelId`를 한 번에 넘길 때 사용 */
+export function llmOptionsFromAgentState(state: {
+  activeModelTier: ActiveModelTier;
+  vendorModelId?: string;
+}): CompleteTextOptions {
+  const id = state.vendorModelId?.trim();
+  return {
+    tier: state.activeModelTier,
+    ...(id ? { vendorModelId: id } : {}),
+  };
 }
 
 function chunkTextFromMessage(chunk: AIMessageChunk): string {
@@ -107,95 +226,55 @@ export async function streamTextTracked(
   user: string,
   options: StreamTextTrackedOptions,
 ): Promise<TrackedTextResult> {
-  const tier = options.tier ?? "standard";
   const onChunk = options.onChunk;
-  const p = provider();
-  if (p === "openai") {
-    const modelId = resolveOpenAIModel(tier);
-    const model = new ChatOpenAI({
-      model: modelId,
-      temperature: 0.2,
-      ...(options?.jsonMode
-        ? { modelKwargs: { response_format: { type: "json_object" } } }
-        : {}),
-    });
-    const started = Date.now();
-    const stream = await model.stream([
-      new SystemMessage(system),
-      new HumanMessage(user),
-    ]);
-    let text = "";
-    let lastUsage: LlmUsageRecord = {
-      inputTokens: 0,
-      outputTokens: 0,
-      modelId,
-    };
-    for await (const chunk of stream) {
-      const piece = chunkTextFromMessage(chunk as AIMessageChunk);
-      if (piece) {
-        text += piece;
-        onChunk(piece);
-      }
-      const u = chunk.usage_metadata;
-      if (u) {
-        lastUsage = {
-          inputTokens: u.input_tokens ?? lastUsage.inputTokens,
-          outputTokens: u.output_tokens ?? lastUsage.outputTokens,
-          modelId,
-          cachedTokensHit: readCachedTokens(u as unknown as Record<string, unknown>),
-        };
-      }
+  const tier = options.tier ?? "standard";
+  const backend = buildLlmBackend(options);
+
+  if (backend.tag === "mock") {
+    const text = mockComplete(system, user, options?.jsonMode);
+    const chunkSize = 48;
+    for (let i = 0; i < text.length; i += chunkSize) {
+      onChunk(text.slice(i, i + chunkSize));
     }
-    lastUsage.executionTimeMs = Date.now() - started;
-    return { text, usage: lastUsage };
-  }
-  if (p === "google") {
-    const modelId = resolveGoogleModel(tier);
-    const model = new ChatGoogleGenerativeAI({
-      model: modelId,
-      temperature: 0.2,
-    });
-    const started = Date.now();
-    const stream = await model.stream([
-      new SystemMessage(system),
-      new HumanMessage(user),
-    ]);
-    let text = "";
-    let lastUsage: LlmUsageRecord = {
-      inputTokens: 0,
-      outputTokens: 0,
-      modelId,
+    const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
+    return {
+      text,
+      usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 12 },
     };
-    for await (const chunk of stream) {
-      const piece = chunkTextFromMessage(chunk as AIMessageChunk);
-      if (piece) {
-        text += piece;
-        onChunk(piece);
-      }
-      const u = chunk.usage_metadata;
-      if (u) {
-        lastUsage = {
-          inputTokens: u.input_tokens ?? lastUsage.inputTokens,
-          outputTokens: u.output_tokens ?? lastUsage.outputTokens,
-          modelId,
-          cachedTokensHit: readCachedTokens(u as unknown as Record<string, unknown>),
-        };
-      }
-    }
-    lastUsage.executionTimeMs = Date.now() - started;
-    return { text, usage: lastUsage };
   }
-  const text = mockComplete(system, user, options?.jsonMode);
-  const chunkSize = 48;
-  for (let i = 0; i < text.length; i += chunkSize) {
-    const part = text.slice(i, i + chunkSize);
-    onChunk(part);
-  }
-  const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
-  return {
-    text,
-    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 12 },
+
+  const live = backend as LiveLlmBackend;
+  const { modelId } = live;
+  const started = Date.now();
+  const stream = await live.model.stream([
+    new SystemMessage(system),
+    new HumanMessage(user),
+  ]);
+
+  let text = "";
+  let lastUsage: LlmUsageRecord = {
+    inputTokens: 0,
+    outputTokens: 0,
+    modelId,
   };
+  for await (const chunk of stream) {
+    const piece = chunkTextFromMessage(chunk as AIMessageChunk);
+    if (piece) {
+      text += piece;
+      onChunk(piece);
+    }
+    const u = chunk.usage_metadata;
+    if (u) {
+      lastUsage = {
+        inputTokens: u.input_tokens ?? lastUsage.inputTokens,
+        outputTokens: u.output_tokens ?? lastUsage.outputTokens,
+        modelId,
+        cachedTokensHit: readCachedTokens(u as unknown as Record<string, unknown>),
+      };
+    }
+  }
+  lastUsage.executionTimeMs = Date.now() - started;
+  return { text, usage: lastUsage };
 }
 
 /**
@@ -207,55 +286,27 @@ export async function completeTextTracked(
   options?: CompleteTextOptions,
 ): Promise<TrackedTextResult> {
   const tier = options?.tier ?? "standard";
-  const p = provider();
-  if (p === "openai") {
-    const modelId = resolveOpenAIModel(tier);
-    const model = new ChatOpenAI({
-      model: modelId,
-      temperature: 0.2,
-      ...(options?.jsonMode
-        ? { modelKwargs: { response_format: { type: "json_object" } } }
-        : {}),
-    });
-    const started = Date.now();
-    const res = await model.invoke([
-      new SystemMessage(system),
-      new HumanMessage(user),
-    ]);
-    const text =
-      typeof res.content === "string" ? res.content : JSON.stringify(res.content);
-    return { text, usage: readUsage(res, modelId, Date.now() - started) };
+  const backend = buildLlmBackend(options);
+
+  if (backend.tag === "mock") {
+    const text = mockComplete(system, user, options?.jsonMode);
+    const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
+    return {
+      text,
+      usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 10 },
+    };
   }
-  if (p === "google") {
-    const modelId = resolveGoogleModel(tier);
-    const model = new ChatGoogleGenerativeAI({
-      model: modelId,
-      temperature: 0.2,
-      ...(options?.jsonMode
-        ? {
-            modelKwargs: {
-              generationConfig: {
-                responseMimeType: "application/json",
-              },
-            },
-          }
-        : {}),
-    });
-    const started = Date.now();
-    const res = await model.invoke([
-      new SystemMessage(system),
-      new HumanMessage(user),
-    ]);
-    const text =
-      typeof res.content === "string" ? res.content : JSON.stringify(res.content);
-    return { text, usage: readUsage(res, modelId, Date.now() - started) };
-  }
-  const text = mockComplete(system, user, options?.jsonMode);
-  const mockId = tier === "economy" ? "gpt-4o-mini" : "mock";
-  return {
-    text,
-    usage: { inputTokens: 420, outputTokens: 180, modelId: mockId, executionTimeMs: 10 },
-  };
+
+  const live = backend as LiveLlmBackend;
+  const { modelId } = live;
+  const started = Date.now();
+  const res = await live.model.invoke([
+    new SystemMessage(system),
+    new HumanMessage(user),
+  ]);
+  const text =
+    typeof res.content === "string" ? res.content : JSON.stringify(res.content);
+  return { text, usage: readUsage(res, modelId, Date.now() - started) };
 }
 
 /** @deprecated 내부에서 completeTextTracked 사용 권장 */

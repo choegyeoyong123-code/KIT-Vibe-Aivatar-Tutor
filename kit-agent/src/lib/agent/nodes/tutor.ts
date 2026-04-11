@@ -3,7 +3,7 @@ import {
   buildTutorUserPayload,
   parseQuizJson,
 } from "@/lib/agent/prompts/tutor";
-import { completeTextTracked } from "@/lib/agent/llm";
+import { completeTextTracked, llmOptionsFromAgentState } from "@/lib/agent/llm";
 import { handoff } from "@/lib/agent/protocol/inter-agent-message";
 import type { AgentState } from "@/lib/agent/state";
 import { QUALITY_PASS_THRESHOLD } from "@/lib/agent/constants";
@@ -12,7 +12,7 @@ export async function tutorNode(state: AgentState) {
   const user = buildTutorUserPayload(state.structuredSummary);
   const { text: raw, usage } = await completeTextTracked(TUTOR_SYSTEM, user, {
     jsonMode: true,
-    tier: state.activeModelTier,
+    ...llmOptionsFromAgentState(state),
   });
   let finalQuiz;
   let quizParseErr: string | null = null;

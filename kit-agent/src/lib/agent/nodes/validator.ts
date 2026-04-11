@@ -4,7 +4,7 @@ import {
   buildValidateUserPayload,
   parseValidationJson,
 } from "@/lib/agent/prompts/validate";
-import { completeTextTracked } from "@/lib/agent/llm";
+import { completeTextTracked, llmOptionsFromAgentState } from "@/lib/agent/llm";
 import { handoff } from "@/lib/agent/protocol/inter-agent-message";
 import type { AgentState } from "@/lib/agent/state";
 import type { ValidationResultPayload, ValidatorNextGraphNode } from "@/lib/agent/types";
@@ -20,7 +20,7 @@ export async function validatorNode(state: AgentState) {
 
   const { text: raw, usage } = await completeTextTracked(VALIDATE_SYSTEM, user, {
     jsonMode: true,
-    tier: state.activeModelTier,
+    ...llmOptionsFromAgentState(state),
   });
   let parseErr: string | null = null;
   let result: ValidationResultPayload;

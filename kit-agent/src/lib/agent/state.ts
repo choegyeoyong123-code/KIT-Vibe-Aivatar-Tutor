@@ -62,6 +62,11 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_left, right) => right,
     default: () => "",
   }),
+  /** 온보딩 교육 철학 페르소나 — Distiller {{EDUCATIONAL_PHILOSOPHY}} 슬롯 */
+  educationalPersonaSystemPrompt: Annotation<string>({
+    reducer: (_left, right) => right,
+    default: () => "",
+  }),
   personaMediaCostTier: Annotation<PersonaMediaCostTier>({
     reducer: (_left, right) => right,
     default: () => "low",
@@ -181,6 +186,11 @@ export const AgentStateAnnotation = Annotation.Root({
   activeModelTier: Annotation<ActiveModelTier>({
     reducer: (_left, right) => right,
     default: () => "standard",
+  }),
+  /** 멀티 벤더 셀렉터 — 비어 있으면 tier·환경변수 기본 라우팅 */
+  vendorModelId: Annotation<string>({
+    reducer: (_left, right) => right,
+    default: () => "",
   }),
   exitProcessorNext: Annotation<ExitProcessorNext | null>({
     reducer: (_left, right) => right,

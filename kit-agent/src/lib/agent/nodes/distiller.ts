@@ -4,7 +4,7 @@ import { buildDistillUserPayload } from "@/lib/agent/prompts/distill";
 import { buildKnowledgeDistillerSystem } from "@/lib/agent/prompts/agents/knowledge-distiller";
 import { estimatePersonaInjectionSavings } from "@/lib/agent/prompts/prompt-inject";
 import { parseDistillerEnvelope } from "@/lib/agent/prompts/distill-output";
-import { completeTextTracked } from "@/lib/agent/llm";
+import { completeTextTracked, llmOptionsFromAgentState } from "@/lib/agent/llm";
 import { distillStreamContext } from "@/lib/agent/distill-stream-context";
 import { handoff } from "@/lib/agent/protocol/inter-agent-message";
 import type { AgentState } from "@/lib/agent/state";
@@ -58,7 +58,11 @@ export async function distillerNode(state: AgentState) {
     state.distillerDynamicAugmentation?.trim() ||
     buildDistillerDynamicPersonaAugment(DEFAULT_DYNAMIC_PERSONA_ID);
   const tutorBlock = buildTutorToneInstructionBlock(tutorToneMode);
+  const eduLayer = state.educationalPersonaSystemPrompt?.trim();
   const systemPrompt = buildKnowledgeDistillerSystem({
+    EDUCATIONAL_PHILOSOPHY:
+      eduLayer ||
+      "(none — learner did not pick an educational philosophy card; use default Elite KIT balance.)",
     PERSONA_INSTRUCTION: augment,
     TUTOR_TONE_BLOCK: tutorBlock,
   });
@@ -68,8 +72,8 @@ export async function distillerNode(state: AgentState) {
     systemPrompt,
     user,
     {
-      tier: state.activeModelTier,
       jsonMode: true,
+      ...llmOptionsFromAgentState(state),
     },
   );
   const { study_note_markdown: structuredSummary, distilledData, pedagogyPack } =

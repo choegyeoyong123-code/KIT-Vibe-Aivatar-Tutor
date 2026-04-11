@@ -10,6 +10,8 @@ import {
   DEFAULT_DYNAMIC_PERSONA_ID,
   parseGalleryPersonaId,
 } from "@/lib/agent/persona/persona-presets";
+import { parseEducationalPersonaSystemPrompt } from "@/lib/agent/educational-persona-prompt";
+import { mergeModelSelectionFromForm } from "@/lib/agent/merge-run-form-model";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -33,6 +35,10 @@ export async function POST(req: NextRequest) {
     const galleryPersonaId =
       parseGalleryPersonaId(form.get("galleryPersonaId")) ??
       DEFAULT_DYNAMIC_PERSONA_ID;
+    const educationalPersonaSystemPrompt = parseEducationalPersonaSystemPrompt(
+      form.get("educationalPersonaSystemPrompt"),
+    );
+    const { vendorModelId, activeModelTier } = mergeModelSelectionFromForm(form);
 
     const ingested = await ingestAgentMaterialsFromFormData(form);
     if (!ingested.ok) {
@@ -49,6 +55,9 @@ export async function POST(req: NextRequest) {
         learningPersona,
         studentDisplayName,
         currentPersonaId: galleryPersonaId,
+        educationalPersonaSystemPrompt,
+        activeModelTier,
+        vendorModelId,
       },
       { configurable: { thread_id: threadId } },
     );

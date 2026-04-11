@@ -268,6 +268,8 @@ export interface AgentStateSnapshot {
   tutorToneMode?: TutorToneMode | null;
   /** Persona_Manager */
   currentPersonaId?: string;
+  /** 온보딩 교육 철학 — Distiller system 레이어 */
+  educationalPersonaSystemPrompt?: string;
   personaMediaCostTier?: "low" | "high";
   personaSafetyPendingHitl?: boolean;
   personaSafetyMessage?: string | null;
@@ -302,6 +304,8 @@ export interface AgentStateSnapshot {
   hitlNextRoute: HitlNextRoute | null;
   pendingExitStrategy: ExitProcessingStrategy | null;
   activeModelTier: ActiveModelTier;
+  /** 멀티 벤더 모델 ID (`openai:gpt-4o-mini` 등) */
+  vendorModelId?: string;
   exitProcessorNext: ExitProcessorNext | null;
   sessionBudgetUsd: number;
   sourceMappings: SourceMapping[];

@@ -4,6 +4,10 @@
 
 import { injectPromptPlaceholders } from "@/lib/agent/prompts/prompt-inject";
 
+const EDUCATIONAL_PHILOSOPHY_LAYER = `## (0) Learner-selected Educational Philosophy
+The learner picked a **tutoring philosophy** below. Layer it **on top of** Elite KIT Tutor identity: adjust metaphor density, pair-style dialogue, production-first compression, quest framing, or academic depth — **without** breaking JSON-only output, factual grounding, or the three-variant structure.
+{{EDUCATIONAL_PHILOSOPHY}}`;
+
 const CONTEXTUAL_IDENTITY = `## (1) Contextual Identity — **Elite KIT Tutor** ("Genius but Kind Teacher")
 You are **Knowledge_Distiller**, operating as the **Elite KIT Tutor** for **Korea University of Technology and Education (KIT)**.
 Pedagogical stance: **world-class mentor in a 1:1 private session** — brilliant, warm, never condescending, never performative.
@@ -99,6 +103,7 @@ Rules:
  * 정적 베이스 — 핵심 교육 로직·스키마. {{PERSONA_INSTRUCTION}} / {{TUTOR_TONE_BLOCK}} 만 런타임 주입.
  */
 export const KNOWLEDGE_DISTILLER_SYSTEM_TEMPLATE = [
+  EDUCATIONAL_PHILOSOPHY_LAYER,
   CONTEXTUAL_IDENTITY,
   "{{TUTOR_TONE_BLOCK}}",
   CHAIN_OF_THOUGHT_PROCEDURE,
@@ -107,12 +112,14 @@ export const KNOWLEDGE_DISTILLER_SYSTEM_TEMPLATE = [
 ].join("\n\n");
 
 export interface DistillSystemInjection {
+  EDUCATIONAL_PHILOSOPHY: string;
   PERSONA_INSTRUCTION: string;
   TUTOR_TONE_BLOCK: string;
 }
 
 export function buildKnowledgeDistillerSystem(inj: DistillSystemInjection): string {
   return injectPromptPlaceholders(KNOWLEDGE_DISTILLER_SYSTEM_TEMPLATE, {
+    EDUCATIONAL_PHILOSOPHY: inj.EDUCATIONAL_PHILOSOPHY,
     PERSONA_INSTRUCTION: inj.PERSONA_INSTRUCTION,
     TUTOR_TONE_BLOCK: inj.TUTOR_TONE_BLOCK,
   });
@@ -120,6 +127,8 @@ export function buildKnowledgeDistillerSystem(inj: DistillSystemInjection): stri
 
 /** 레거시·테스트: 주입 없이 최소 스텁(내용에 Knowledge_Distiller 문자열 유지) */
 export const KNOWLEDGE_DISTILLER_SYSTEM = buildKnowledgeDistillerSystem({
+  EDUCATIONAL_PHILOSOPHY:
+    "(stub — 온보딩에서 선택 시 런타임 문자열로 교체; 없으면 기본 밸런스)",
   PERSONA_INSTRUCTION:
     "(stub — 서버 런타임에서 Persona_Manager 블록으로 교체; warm_instructor 가정)",
   TUTOR_TONE_BLOCK: [

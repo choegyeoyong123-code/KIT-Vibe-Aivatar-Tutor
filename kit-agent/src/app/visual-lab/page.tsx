@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function VisualLabPage() {
   return (
-    <div className="flex min-h-full flex-col bg-background">
+    <div className="flex min-h-full flex-col bg-white text-[#4B4B4B]">
       <VisualLabPanel />
     </div>
   );

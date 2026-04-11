@@ -23,7 +23,16 @@ export async function fetchAgentJobStatus(
     method: "GET",
     cache: "no-store",
   });
-  const data = (await res.json()) as AgentJobPollResult & { error?: string };
+  const raw = await res.text();
+  let data: AgentJobPollResult & { error?: string };
+  // FIX: HTML·비JSON 오류 본문에서 JSON.parse 예외를 흡수해 상위 try/catch로 안전하게 전달
+  try {
+    data = JSON.parse(raw) as AgentJobPollResult & { error?: string };
+  } catch {
+    throw new Error(
+      raw ? `상태 응답 파싱 실패: ${raw.slice(0, 120)}` : `Job status ${res.status}`,
+    );
+  }
   if (!res.ok) {
     throw new Error(data.error || `Job status ${res.status}`);
   }

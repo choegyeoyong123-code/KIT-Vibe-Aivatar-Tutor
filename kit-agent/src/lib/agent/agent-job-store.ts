@@ -1,4 +1,8 @@
-import type { AgentAsyncJobStatus, MultimodalMaterial } from "@/lib/agent/types";
+import type {
+  ActiveModelTier,
+  AgentAsyncJobStatus,
+  MultimodalMaterial,
+} from "@/lib/agent/types";
 import type { LearningPersonaId } from "@/lib/agent/learning-persona";
 import type { DynamicPersonaId } from "@/lib/agent/persona/types";
 
@@ -14,6 +18,10 @@ export interface AgentAsyncJobRecord {
   learningPersona: LearningPersonaId;
   studentDisplayName: string;
   galleryPersonaId: DynamicPersonaId;
+  /** 온보딩 교육 철학 systemPrompt (빈 문자열 가능; 구 작업 레코드는 생략될 수 있음) */
+  educationalPersonaSystemPrompt?: string;
+  activeModelTier?: ActiveModelTier;
+  vendorModelId?: string;
   createdAt: number;
   updatedAt: number;
   error?: string;

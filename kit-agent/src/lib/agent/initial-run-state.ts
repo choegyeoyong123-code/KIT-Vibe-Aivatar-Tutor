@@ -12,6 +12,7 @@ export const learningGraphInitialFields = {
   tutorToneMode: null as TutorToneMode | null,
   currentPersonaId: "warm_instructor",
   distillerDynamicAugmentation: "",
+  educationalPersonaSystemPrompt: "",
   personaMediaCostTier: "low" as const,
   personaSafetyPendingHitl: false,
   personaSafetyMessage: null as string | null,
@@ -44,6 +45,7 @@ export const learningGraphInitialFields = {
   hitlNextRoute: null,
   pendingExitStrategy: null,
   activeModelTier: "standard" as const,
+  vendorModelId: "",
   exitProcessorNext: null,
   sessionBudgetUsd: (() => {
     const v = Number(process.env.HITL_SESSION_BUDGET_USD);

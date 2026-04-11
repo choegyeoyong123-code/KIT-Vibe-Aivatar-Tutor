@@ -9,6 +9,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        /** 듀오링고식 청키 CTA — 에메랄드 + 아래쪽 입체 테두리 */
+        chunky:
+          "rounded-2xl border-0 bg-[#58CC02] font-semibold text-white shadow-none !border-b-4 !border-[#3ea001] hover:brightness-[1.03] active:!translate-y-[2px] active:!border-b-2 active:!border-[#3ea001] focus-visible:ring-2 focus-visible:ring-[#58CC02]/30 focus-visible:ring-offset-2",
+        /** 코드 복사 등 — 사이안 테타일 */
+        cyanTactile:
+          "rounded-2xl border-0 bg-[#1CB0F6] font-semibold text-white shadow-none !border-b-4 !border-[#1593d4] hover:brightness-[1.03] active:!translate-y-[2px] active:!border-b-2 active:!border-[#1593d4] focus-visible:ring-2 focus-visible:ring-[#1CB0F6]/30 focus-visible:ring-offset-2",
+        /** 보안 영수증 열기 — 화이트 + 사이안 테두리 */
+        receiptOutline:
+          "rounded-2xl border-2 border-[#1CB0F6] bg-white font-semibold text-[#1CB0F6] shadow-none hover:bg-[#1CB0F6]/5 active:!translate-y-[2px]",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
