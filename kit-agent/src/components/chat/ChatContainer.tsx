@@ -39,6 +39,7 @@ export function ChatContainer() {
     setVocalOutput,
     voiceTrainingActive,
     voiceTrainingProgress,
+    voiceTrainingError,
     simulateVoiceTraining,
   } = useVibe();
 
@@ -165,7 +166,13 @@ export function ChatContainer() {
                           className="text-[clamp(1.1rem,5vmin,1.5rem)] text-pw-on-surface-variant"
                         />
                         <span className="mt-0.5 font-mono text-[clamp(0.55rem,2.8vmin,0.625rem)] font-bold tabular-nums text-slate-500">
-                          {voiceTrainingActive ? `${voiceTrainingProgress}%` : "대기"}
+                          {voiceTrainingActive
+                            ? voiceTrainingProgress < 50
+                              ? "녹음"
+                              : voiceTrainingProgress < 100
+                                ? "처리"
+                                : "완료"
+                            : "대기"}
                         </span>
                       </div>
                     </div>
@@ -176,13 +183,20 @@ export function ChatContainer() {
                       <p className="mt-1 text-[11px] leading-relaxed text-pw-on-surface-variant sm:text-xs">
                         샘플은 volatile 메모리에만 올라가며, 시뮬레이션 종료 시 버퍼가 비워집니다.
                       </p>
+                      {voiceTrainingError ? (
+                        <p className="mt-2 text-[11px] font-semibold text-red-600 sm:text-xs" role="alert">
+                          {voiceTrainingError}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   <motion.button
                     type="button"
                     whileTap={{ y: 2, scale: 0.98 }}
                     disabled={voiceTrainingActive}
-                    onClick={simulateVoiceTraining}
+                    onClick={() => {
+                      void simulateVoiceTraining();
+                    }}
                     id="btn-train-voice"
                     className="tactile-button w-full shrink-0 rounded-2xl border-b-4 border-[#00422b] bg-pw-primary px-4 py-2.5 text-sm font-bold text-white shadow-md disabled:opacity-60 sm:w-auto"
                     style={{
