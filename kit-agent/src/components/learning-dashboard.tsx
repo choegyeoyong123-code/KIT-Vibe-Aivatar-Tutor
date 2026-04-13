@@ -196,6 +196,7 @@ export function LearningDashboard() {
     emotionalFeedback,
     accentHex,
     pushToast,
+    learningPromptPrefix,
   } = useWorkshopExperience();
   const { recordFromSnapshot, setLiveSnapshot, cumulativeSavedTokens } =
     useTokenSavings();
@@ -286,8 +287,12 @@ export function LearningDashboard() {
       fd.set("learningPersona", learningPersona);
       fd.set("galleryPersonaId", selectedPersonaId);
       fd.set("vendorModelId", inferenceModeToVendorModelId(inferenceMode));
-      if (educationalPersonaSystemPrompt.trim()) {
-        fd.set("educationalPersonaSystemPrompt", educationalPersonaSystemPrompt.trim());
+      const personaPrompt = educationalPersonaSystemPrompt.trim();
+      const mergedPrompt = [learningPromptPrefix.trim(), personaPrompt]
+        .filter((s) => s.length > 0)
+        .join("\n\n");
+      if (mergedPrompt) {
+        fd.set("educationalPersonaSystemPrompt", mergedPrompt);
       }
       if (studentName.trim()) {
         fd.set("studentName", studentName.trim());
@@ -448,6 +453,7 @@ export function LearningDashboard() {
     vercelAsyncJobs,
     recordFromSnapshot,
     educationalPersonaSystemPrompt,
+    learningPromptPrefix,
     inferenceMode,
   ]);
 

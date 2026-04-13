@@ -16,6 +16,7 @@ import type { InferenceCostMode } from "@/constants/vendor-models";
 export type WorkshopToast = { id: string; message: string };
 
 export type VisualLabView = "workspace" | "quiz";
+export type LearningCognitiveDepth = "beginner" | "intermediate" | "advanced";
 
 export interface WorkshopExperienceValue {
   inferenceMode: InferenceCostMode;
@@ -39,6 +40,13 @@ export interface WorkshopExperienceValue {
   mediaStudioBusy: boolean;
   mediaStudioStatusText: string;
   startMediaStudioSimulation: () => void;
+  learningSpeechRate: 0.8 | 1 | 1.2 | 1.5;
+  setLearningSpeechRate: (v: 0.8 | 1 | 1.2 | 1.5) => void;
+  learningCognitiveDepth: LearningCognitiveDepth;
+  setLearningCognitiveDepth: (v: LearningCognitiveDepth) => void;
+  darkModeEnabled: boolean;
+  setDarkModeEnabled: (v: boolean) => void;
+  learningPromptPrefix: string;
 }
 
 export const WorkshopExperienceContext =
@@ -56,6 +64,10 @@ const MEDIA_STATUS = [
   "렌더 잡을 큐에 밀어 넣고 세션 영수증을 갱신하는 중…",
 ] as const;
 
+const LS_SPEECH_RATE_KEY = "kit-learning-speech-rate";
+const LS_COGNITIVE_DEPTH_KEY = "kit-learning-cognitive-depth";
+const LS_DARK_MODE_KEY = "kit-dark-mode-enabled";
+
 export function WorkshopExperienceProvider({ children }: { children: ReactNode }) {
   const { selectedPersona } = useEducationalPersona();
   const [inferenceMode, setInferenceMode] = useState<InferenceCostMode>("eco");
@@ -70,6 +82,28 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
 
   const [mediaStudioBusy, setMediaStudioBusy] = useState(false);
   const [mediaStudioStatusText, setMediaStudioStatusText] = useState("");
+  const [learningSpeechRate, setLearningSpeechRate] = useState<0.8 | 1 | 1.2 | 1.5>(() => {
+    if (typeof window === "undefined") return 1;
+    const v = Number(window.localStorage.getItem(LS_SPEECH_RATE_KEY));
+    if (v === 0.8 || v === 1 || v === 1.2 || v === 1.5) return v;
+    return 1;
+  });
+  const [learningCognitiveDepth, setLearningCognitiveDepth] = useState<LearningCognitiveDepth>(
+    () => {
+      if (typeof window === "undefined") return "intermediate";
+      const v = window.localStorage.getItem(LS_COGNITIVE_DEPTH_KEY);
+      if (v === "beginner" || v === "intermediate" || v === "advanced") return v;
+      return "intermediate";
+    },
+  );
+  const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(LS_DARK_MODE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const simTimersRef = useRef<number[]>([]);
 
@@ -79,6 +113,31 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
   }, []);
 
   useEffect(() => () => clearSimTimers(), [clearSimTimers]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_SPEECH_RATE_KEY, String(learningSpeechRate));
+    } catch {
+      // ignore
+    }
+  }, [learningSpeechRate]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_COGNITIVE_DEPTH_KEY, learningCognitiveDepth);
+    } catch {
+      // ignore
+    }
+  }, [learningCognitiveDepth]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_DARK_MODE_KEY, darkModeEnabled ? "1" : "0");
+    } catch {
+      // ignore
+    }
+    document.documentElement.classList.toggle("dark", darkModeEnabled);
+  }, [darkModeEnabled]);
 
   useEffect(() => {
     const step = inferenceMode === "eco" ? 0.0001 : 0.0005;
@@ -173,6 +232,21 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
     });
   }, [clearSimTimers, mediaStudioBusy, pushToast]);
 
+  const learningPromptPrefix = useMemo(() => {
+    const depthKo =
+      learningCognitiveDepth === "beginner"
+        ? "비유 중심(Beginner)"
+        : learningCognitiveDepth === "advanced"
+          ? "심층 분석(Advanced)"
+          : "핵심 요약(Intermediate)";
+    return [
+      "[Learning Preferences]",
+      `- AI Speech Rate: ${learningSpeechRate.toFixed(1)}x`,
+      `- Cognitive Depth: ${depthKo}`,
+      "- Apply this preference consistently in response tone and structure.",
+    ].join("\n");
+  }, [learningCognitiveDepth, learningSpeechRate]);
+
   const value = useMemo(
     () => ({
       inferenceMode,
@@ -195,6 +269,13 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       mediaStudioBusy,
       mediaStudioStatusText,
       startMediaStudioSimulation,
+      learningSpeechRate,
+      setLearningSpeechRate,
+      learningCognitiveDepth,
+      setLearningCognitiveDepth,
+      darkModeEnabled,
+      setDarkModeEnabled,
+      learningPromptPrefix,
     }),
     [
       inferenceMode,
@@ -214,6 +295,10 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       mediaStudioBusy,
       mediaStudioStatusText,
       startMediaStudioSimulation,
+      learningSpeechRate,
+      learningCognitiveDepth,
+      darkModeEnabled,
+      learningPromptPrefix,
     ],
   );
 
