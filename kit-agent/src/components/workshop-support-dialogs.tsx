@@ -35,7 +35,7 @@ export function WorkshopSupportDialogs() {
                 설정
               </DialogTitle>
               <DialogDescription className="text-left text-sm text-slate-600">
-                워크숍 세션 환경을 조정합니다. 변경 사항은 이 브라우저에만 적용됩니다.
+                워크숍 세션 환경을 조정합니다. 변경 사항은 https://kit-vibe-aivatar-tutor.vercel.app/ 웹사이트 전체에 적용됩니다.
               </DialogDescription>
             </DialogHeader>
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5 pb-1 custom-scroll">
@@ -49,7 +49,7 @@ export function WorkshopSupportDialogs() {
                   Learning Preferences
                 </p>
                 <p className="mt-1 text-xs text-slate-600">
-                  변경 즉시 전역 상태에 반영되며, AI 프롬프트 Prefix에 동기화됩니다.
+                  변경 즉시 전역 상태에 반영되며, 웹사이트 전체에서 AI 프롬프트 Prefix에 동기화됩니다.
                 </p>
 
                 <div className="mt-4">
