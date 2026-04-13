@@ -5,7 +5,7 @@ import { useId, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { MaterialSymbol } from "@/components/material-symbol";
 import { cn } from "@/lib/utils";
-import { getWorkshopDemoUserDisplayName, useVibe } from "@/components/vibe-context";
+import { useVibe } from "@/components/vibe-context";
 import { AsyncProcessingLaymanTooltip } from "@/components/async-processing-layman-tooltip";
 import { WorkshopInteractiveQuizMock } from "@/components/workshop-interactive-quiz-mock";
 
@@ -22,7 +22,6 @@ export function ChatContainer() {
   const [draft, setDraft] = useState("");
   const asyncQuizTipId = useId();
   const asyncMediaTipId = useId();
-  const demoName = getWorkshopDemoUserDisplayName();
   const {
     selectedPersona,
     accentHex,
@@ -74,7 +73,7 @@ export function ChatContainer() {
                 className="text-balance font-headline text-2xl font-extrabold tracking-tight text-pw-on-surface sm:text-3xl md:text-4xl"
                 style={{ color: selectedPersona ? accentHex : undefined }}
               >
-                안녕하세요, {demoName}님!
+                안녕하세요
               </h2>
               <p className="text-pretty text-sm font-medium text-slate-500 sm:text-base">
                 {greetingSub}
