@@ -87,13 +87,14 @@ export function FinOpsModelInsightWidget({
   const { label, mode } = resolveModelLine(activeModelTier, mediaHigh);
 
   const metrics = finOps?.measured_performance?.metrics;
+  const actualInputTokens = metrics?.actual_input_tokens;
   const inputTok = useMemo(() => {
-    if (metrics?.actual_input_tokens != null && Number.isFinite(metrics.actual_input_tokens)) {
-      return Math.round(metrics.actual_input_tokens);
+    if (actualInputTokens != null && Number.isFinite(actualInputTokens)) {
+      return Math.round(actualInputTokens);
     }
     if (totalTokenUsage <= 0) return 0;
     return Math.max(0, Math.round(totalTokenUsage * 0.52));
-  }, [metrics?.actual_input_tokens, totalTokenUsage]);
+  }, [actualInputTokens, totalTokenUsage]);
 
   const outputTok = useMemo(() => {
     if (totalTokenUsage <= 0) return 0;

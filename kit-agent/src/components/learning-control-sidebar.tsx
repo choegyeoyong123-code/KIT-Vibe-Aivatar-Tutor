@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -53,11 +54,17 @@ function SidebarSecuritySummary() {
     >
       <p
         className={cn(
-          "font-sans text-[10px] font-semibold uppercase tracking-[0.18em]",
+          "flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em]",
           safe ? "text-emerald-700/80" : active ? "text-cyan-800/80" : "text-[#4B4B4B]/50",
         )}
       >
         Security Pulse
+        {active ? (
+          <span
+            className="kit-breathe inline-block size-1.5 rounded-full bg-cyan-500"
+            aria-hidden
+          />
+        ) : null}
       </p>
       <p
         className={cn(
@@ -133,7 +140,7 @@ export function LearningControlSidebar({
     <aside
       className={cn(
         kitSidebarRailClass,
-        "flex min-h-0 w-full max-w-none shrink-0 flex-col gap-4 overflow-y-auto border-b-2 border-gray-100 p-4 sm:p-5",
+        "hidden min-h-0 w-full max-w-none shrink-0 flex-col gap-4 overflow-y-auto border-b-2 border-gray-100 p-4 sm:p-5 lg:flex",
         "lg:h-[calc(100vh-80px)] lg:max-h-[calc(100vh-80px)] lg:w-80 lg:flex-shrink-0 lg:border-b-0 lg:border-r-2 border-gray-100",
         className,
       )}
@@ -193,11 +200,20 @@ export function LearningControlSidebar({
           {EDUCATIONAL_PERSONAS.map((p) => {
             const on = selectedPersona?.id === p.id;
             return (
-              <button
+              <motion.button
                 key={p.id}
                 type="button"
-                onClick={() => selectPersona(p.id)}
+                layout
+                whileTap={{ y: 2, scale: 0.99 }}
+                onClick={() => {
+                  selectPersona(p.id);
+                  if (p.id === "metaphor_mage") {
+                    window.dispatchEvent(new CustomEvent("golden-persona-pancake"));
+                  }
+                }}
+                data-golden-target={p.id === "metaphor_mage" ? "pancake-wizard" : undefined}
                 className={cn(
+                  "persona-card-tactile",
                   personaCardBase,
                   on
                     ? "border-emerald-400 border-b-emerald-600 shadow-sm"
@@ -213,7 +229,7 @@ export function LearningControlSidebar({
                   </span>
                   <span className="mt-0.5 block font-sans text-[10px] text-[#4B4B4B]/50">{p.level}</span>
                 </span>
-              </button>
+              </motion.button>
             );
           })}
         </div>

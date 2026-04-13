@@ -7,6 +7,8 @@ import type { PersonaAnimationScript } from "@/lib/media-persona/types";
 export async function runMediaRenderPipeline(input: {
   jobId: string;
   script: PersonaAnimationScript;
+  /** persona 외 "내 목소리" 근사 시 Gemini→TTS 지침 */
+  userVoiceTtsInstructions?: string | null;
 }): Promise<{
   sceneAudioPaths: string[];
   combinedAudioUrl: string | null;
@@ -22,6 +24,7 @@ export async function runMediaRenderPipeline(input: {
       dialogue: s.dialogue,
     })),
     personaVoiceKey: input.script.persona_id,
+    userVoiceTtsInstructions: input.userVoiceTtsInstructions,
   });
 
   const sceneAudioPaths = results

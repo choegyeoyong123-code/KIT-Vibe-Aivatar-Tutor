@@ -1,45 +1,33 @@
 import type { Metadata } from "next";
-import { LearningDashboard } from "@/components/learning-dashboard";
 import { EducationalPersonaProvider } from "@/components/educational-persona-context";
-import { PersonaSelector } from "@/components/PersonaSelector";
-import { PersonaGalleryProvider } from "@/components/persona-gallery-context";
-import { SecurityPulseProvider } from "@/components/security-pulse-context";
-import { TokenSavingsProvider } from "@/components/token-savings-context";
+import { WorkshopExperienceProvider } from "@/components/workshop-experience-context";
+import { VibeProvider } from "@/components/vibe-context";
+import { WorkshopHomeShell } from "@/components/workshop-home-shell";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site-config";
-import { pageShellClass } from "@/lib/glass-styles";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "학습 대시보드",
+  title: "Pristine Workshop",
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
-    title: `${SITE_NAME} — 학습 대시보드`,
+    title: `Pristine Workshop · ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
     url: "/",
   },
 };
 
+/**
+ * STITCH 정적 HTML → React 모듈 (Sidebar / Header / ChatWorkspace).
+ * 기존 학습 대시보드는 `/dashboard` 로 이동했습니다.
+ */
 export default function Home() {
   return (
-    <PersonaGalleryProvider>
-      <EducationalPersonaProvider>
-        <TokenSavingsProvider>
-          <SecurityPulseProvider>
-            <div
-              className={cn(
-                pageShellClass,
-                "flex h-dvh min-h-0 flex-col overflow-hidden",
-              )}
-            >
-              <PersonaSelector />
-              <div className="relative z-0 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col bg-[#FFFFFF]">
-                <LearningDashboard />
-              </div>
-            </div>
-          </SecurityPulseProvider>
-        </TokenSavingsProvider>
-      </EducationalPersonaProvider>
-    </PersonaGalleryProvider>
+    <EducationalPersonaProvider>
+      <WorkshopExperienceProvider>
+        <VibeProvider>
+          <WorkshopHomeShell />
+        </VibeProvider>
+      </WorkshopExperienceProvider>
+    </EducationalPersonaProvider>
   );
 }

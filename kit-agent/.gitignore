@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# See https://help.github.com/articles/ignoring-files/
 
 # dependencies
 /node_modules
@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/.nyc_output
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -19,32 +22,44 @@
 
 # production
 /build
+/dist
 
-# local policy / vector store (kit-agent)
+# local policy / vector store
 /data/
 
-# generated TTS / placeholder MP4 (media pipeline)
+# generated TTS / media / avatar outputs
 /public/media-output/
-
-# avatar uploads & lecture outputs
 /public/avatar-cache/
 /public/avatar-output/
 
-# misc
+# IDE / OS
 .DS_Store
-*.pem
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
 
-# debug
+# certs / keys
+*.pem
+*.p12
+
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
+# env — 비밀은 절대 커밋하지 않음 (예시만 커밋)
 .env*
+!.env.example
 
-# vercel
+# vercel / turbo
 .vercel
+.turbo
 
 # typescript
 *.tsbuildinfo

@@ -5,9 +5,11 @@ import { buildCostBreakdown, shouldRequireRenderHitl } from "@/lib/media-persona
 import { saveMediaJob } from "@/lib/media-persona/job-store";
 import { runMediaRenderPipeline } from "@/lib/media-persona/render-pipeline";
 import { generatePersonaAnimationScript } from "@/lib/media-persona/script-engine";
+import type { MediaVoiceOutputMode } from "@/lib/media-persona/job-store";
 import type { PersonaId } from "@/lib/media-persona/types";
 import { generateTextToVideoPromptPack } from "@/lib/media-persona/video-prompt-engine";
 import { rateLimitExceededResponse } from "@/lib/security/rate-limit";
+import { sanitizeUserPlaintextForLlm } from "@/lib/privacy/sanitize-for-llm";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -22,6 +24,8 @@ interface Body {
   deferRender?: boolean;
   /** 세션 예산(USD) 초과 시에도 HITL */
   sessionBudgetUsd?: number;
+  voiceOutputMode?: MediaVoiceOutputMode;
+  userVoiceTtsInstructions?: string | null;
 }
 
 function resolvePersona(raw: unknown): PersonaId {
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (limited) return limited;
   try {
     const body = (await req.json()) as Body;
-    const masterContext = (body.masterContext ?? "").trim();
+    const masterContext = await sanitizeUserPlaintextForLlm((body.masterContext ?? "").trim());
     if (!masterContext) {
       return NextResponse.json(
         { error: "masterContext(Knowledge Master Context)가 필요합니다." },
@@ -42,12 +46,35 @@ export async function POST(req: NextRequest) {
     }
 
     const personaId = resolvePersona(body.personaId);
+    const voiceOutputMode: MediaVoiceOutputMode =
+      body.voiceOutputMode === "user" ? "user" : "persona";
+    const userVoiceTtsInstructionsRaw =
+      typeof body.userVoiceTtsInstructions === "string"
+        ? body.userVoiceTtsInstructions.trim() || null
+        : null;
+    const userVoiceTtsInstructions = userVoiceTtsInstructionsRaw
+      ? await sanitizeUserPlaintextForLlm(userVoiceTtsInstructionsRaw)
+      : null;
+    if (voiceOutputMode === "user" && !userVoiceTtsInstructions) {
+      return NextResponse.json(
+        {
+          error:
+            "내 목소리 모드에서는 먼저 음성 샘플을 학습시켜 주세요. (voice-profile)",
+        },
+        { status: 400 },
+      );
+    }
+
     const jobId = randomUUID();
+
+    const extraInstruction = body.extraInstruction
+      ? await sanitizeUserPlaintextForLlm(body.extraInstruction.trim())
+      : undefined;
 
     const { script, llmUsd: sUsd } = await generatePersonaAnimationScript({
       masterContext,
       personaId,
-      extraInstruction: body.extraInstruction,
+      extraInstruction,
     });
 
     const { pack, llmUsd: vUsd } = await generateTextToVideoPromptPack({
@@ -89,11 +116,18 @@ export async function POST(req: NextRequest) {
       costs,
       hitlRequired,
       createdAt: Date.now(),
+      voiceOutputMode,
+      userVoiceTtsInstructions,
     });
 
     let render: Awaited<ReturnType<typeof runMediaRenderPipeline>> | null = null;
     if (!hitlRequired) {
-      render = await runMediaRenderPipeline({ jobId, script });
+      render = await runMediaRenderPipeline({
+        jobId,
+        script,
+        userVoiceTtsInstructions:
+          voiceOutputMode === "user" ? userVoiceTtsInstructions : null,
+      });
     }
 
     return NextResponse.json({

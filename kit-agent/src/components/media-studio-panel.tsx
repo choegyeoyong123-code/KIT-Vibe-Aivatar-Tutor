@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +13,15 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Clapperboard, DollarSign, Mic } from "lucide-react";
+import {
+  Loader2,
+  Clapperboard,
+  DollarSign,
+  Mic,
+  CheckCircle2,
+  Info,
+  Lock,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -22,6 +31,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SecurityTrustDialog } from "@/components/security-trust-dialog";
+import { VoiceWaveformOverlay } from "@/components/voice-waveform-overlay";
+import { GoldenPathCoach } from "@/components/golden-path-coach";
+import { shieldStringFields } from "@/lib/client/pii-shield";
+import { createVoiceProfileEcdhClientSession } from "@/lib/client/voice-response-ecdh";
+import type { VoiceProfileCryptoEnvelope } from "@/lib/media-persona/voice-crypto-types";
+import type { MediaVoiceOutputMode } from "@/lib/media-persona/job-store";
 
 type PersonaId = "shin-chan" | "neutral-educator";
 
@@ -49,6 +65,13 @@ interface PipelineResponse {
   } | null;
 }
 
+const RECORD_MIN_S = 5;
+const RECORD_MAX_S = 10;
+const RING_R = 44;
+const RING_C = 2 * Math.PI * RING_R;
+
+type VoiceUiPhase = "idle" | "recording" | "analyzing" | "ready";
+
 export function MediaStudioPanel() {
   const formId = useId();
   const [masterContext, setMasterContext] = useState("");
@@ -60,31 +83,218 @@ export function MediaStudioPanel() {
   const [hitlOpen, setHitlOpen] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
 
+  const [outputVoice, setOutputVoice] = useState<MediaVoiceOutputMode>("persona");
+  const [userTtsInstructions, setUserTtsInstructions] = useState<string | null>(
+    null,
+  );
+  const [voiceDemo, setVoiceDemo] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoiceUiPhase>("idle");
+  const [recordProgress, setRecordProgress] = useState(0);
+  const [recordElapsed, setRecordElapsed] = useState(0);
+  const [lastRenderVoice, setLastRenderVoice] =
+    useState<MediaVoiceOutputMode>("persona");
+  const [securityOpen, setSecurityOpen] = useState(false);
+  const [voiceCryptoLocked, setVoiceCryptoLocked] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordMimeRef = useRef<string>("audio/webm");
+  /** 녹음 경과(초) — 클릭 핸들러에서 최신 값 보장 */
+  const elapsedRef = useRef(0);
+
+  const clearTick = () => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  };
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTick();
+      stopStream();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const analyzeBlob = useCallback(async (blob: Blob) => {
+    setVoicePhase("analyzing");
+    setError(null);
+    setVoiceCryptoLocked(false);
+    try {
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const audioBase64 = btoa(binary);
+      const cryptoSession = await createVoiceProfileEcdhClientSession();
+      const res = await fetch("/api/media/voice-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audioBase64,
+          mimeType: blob.type || recordMimeRef.current,
+          clientVoiceEcdhPublicKeyB64: cryptoSession.clientPublicKeyB64,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        demo?: boolean;
+        voiceCryptoEnvelope?: VoiceProfileCryptoEnvelope;
+      };
+      if (!res.ok) throw new Error(data.error || "음성 분석 실패");
+      if (!data.voiceCryptoEnvelope) {
+        throw new Error("암호화된 Voice DNA 응답이 없습니다.");
+      }
+      const bundle = await cryptoSession.decryptEnvelope(data.voiceCryptoEnvelope);
+      const instr = bundle.ttsInstructionsEn?.trim();
+      if (!instr) throw new Error("분석 결과가 비어 있습니다.");
+      setUserTtsInstructions(instr);
+      setVoiceDemo(Boolean(data.demo));
+      setVoiceCryptoLocked(true);
+      window.dispatchEvent(new CustomEvent("golden-voice-sample-ready"));
+      setVoicePhase("ready");
+    } catch (e) {
+      setVoicePhase("idle");
+      setVoiceCryptoLocked(false);
+      setError(e instanceof Error ? e.message : "음성 분석 오류");
+    }
+  }, []);
+
+  const finishRecording = useCallback(() => {
+    clearTick();
+    const mr = mediaRecorderRef.current;
+    if (!mr || mr.state === "inactive") return;
+    mr.stop();
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    setError(null);
+    if (voicePhase === "recording") {
+      if (elapsedRef.current < RECORD_MIN_S) {
+        setError(`녹음은 최소 ${RECORD_MIN_S}초 이상 진행해 주세요.`);
+        return;
+      }
+      finishRecording();
+      return;
+    }
+
+    try {
+      setVoiceCryptoLocked(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "";
+      recordMimeRef.current = mime || "audio/webm";
+      const mr = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (ev) => {
+        if (ev.data.size > 0) chunksRef.current.push(ev.data);
+      };
+      mr.onstop = () => {
+        clearTick();
+        stopStream();
+        const blob = new Blob(chunksRef.current, {
+          type: mr.mimeType || recordMimeRef.current,
+        });
+        chunksRef.current = [];
+        mediaRecorderRef.current = null;
+        const elapsed = elapsedRef.current;
+        setRecordProgress(0);
+        setRecordElapsed(0);
+        elapsedRef.current = 0;
+        if (elapsed < RECORD_MIN_S) {
+          setVoicePhase("idle");
+          setError(`샘플은 ${RECORD_MIN_S}~${RECORD_MAX_S}초 사이로 녹음해 주세요.`);
+          return;
+        }
+        void analyzeBlob(blob);
+      };
+      mediaRecorderRef.current = mr;
+      mr.start(200);
+      setVoicePhase("recording");
+      setRecordElapsed(0);
+      setRecordProgress(0);
+      elapsedRef.current = 0;
+      const t0 = Date.now();
+      clearTick();
+      tickRef.current = setInterval(() => {
+        const sec = (Date.now() - t0) / 1000;
+        elapsedRef.current = sec;
+        setRecordElapsed(sec);
+        const p = Math.min(1, sec / RECORD_MAX_S);
+        setRecordProgress(p);
+        if (sec >= RECORD_MAX_S) {
+          finishRecording();
+        }
+      }, 100);
+    } catch {
+      setError("마이크 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.");
+    }
+  }, [analyzeBlob, finishRecording, voicePhase]);
+
   const runPipeline = useCallback(async () => {
     setError(null);
+    if (outputVoice === "user" && !userTtsInstructions?.trim()) {
+      setError("내 목소리 모드에서는 먼저 🎙️ 내 목소리 학습시키기를 완료해 주세요.");
+      return;
+    }
     setLoading(true);
     setResult(null);
     setHitlOpen(false);
     try {
+      const pipelineBody = await shieldStringFields(
+        {
+          masterContext,
+          personaId,
+          extraInstruction: extra.trim() || "",
+          voiceOutputMode: outputVoice,
+          userVoiceTtsInstructions:
+            outputVoice === "user" ? userTtsInstructions ?? "" : "",
+        },
+        ["masterContext", "extraInstruction", "userVoiceTtsInstructions"],
+      );
       const res = await fetch("/api/media/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          masterContext,
-          personaId,
-          extraInstruction: extra.trim() || undefined,
+          masterContext: pipelineBody.masterContext,
+          personaId: pipelineBody.personaId,
+          extraInstruction: pipelineBody.extraInstruction.trim()
+            ? pipelineBody.extraInstruction
+            : undefined,
+          voiceOutputMode: pipelineBody.voiceOutputMode,
+          userVoiceTtsInstructions:
+            outputVoice === "user"
+              ? pipelineBody.userVoiceTtsInstructions.trim() || null
+              : null,
         }),
       });
       const data = (await res.json()) as PipelineResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || "파이프라인 실패");
       setResult(data);
+      setLastRenderVoice(outputVoice);
       if (data.hitlRequired) setHitlOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류");
     } finally {
       setLoading(false);
     }
-  }, [masterContext, personaId, extra]);
+  }, [masterContext, personaId, extra, outputVoice, userTtsInstructions]);
 
   const approveRender = useCallback(
     async (approved: boolean) => {
@@ -95,7 +305,13 @@ export function MediaStudioPanel() {
         const res = await fetch("/api/media/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobId: result.jobId, approved }),
+          body: JSON.stringify({
+            jobId: result.jobId,
+            approved,
+            voiceOutputMode: outputVoice,
+            userVoiceTtsInstructions:
+              outputVoice === "user" ? userTtsInstructions : null,
+          }),
         });
         const data = (await res.json()) as {
           error?: string;
@@ -108,6 +324,7 @@ export function MediaStudioPanel() {
           setResult(null);
           return;
         }
+        setLastRenderVoice(outputVoice);
         setResult((prev) =>
           prev
             ? {
@@ -125,8 +342,17 @@ export function MediaStudioPanel() {
         setResumeLoading(false);
       }
     },
-    [result?.jobId],
+    [result?.jobId, outputVoice, userTtsInstructions],
   );
+
+  const vocalBadgeLabel =
+    lastRenderVoice === "user"
+      ? "Vocal: Your Voice"
+      : personaId === "shin-chan"
+        ? "Vocal: Persona · 짱구 풍"
+        : "Vocal: Persona · 중립 교육자";
+
+  const dashOffset = RING_C * (1 - recordProgress);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-8">
@@ -138,13 +364,28 @@ export function MediaStudioPanel() {
             (ffmpeg 시) 플레이스홀더 MP4. CFO 추정 비용 초과 시 HITL.
           </p>
         </div>
-        <Link
-          href="/"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          ← 대시보드
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSecurityOpen(true)}
+            className={cn(
+              buttonVariants({ variant: "receiptOutline", size: "sm" }),
+              "gap-1.5 text-xs sm:text-sm",
+            )}
+            aria-label="보안 및 음성 개인정보 안내"
+          >
+            🔒 안전
+          </button>
+          <Link
+            href="/dashboard"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            ← 대시보드
+          </Link>
+        </div>
       </div>
+
+      <SecurityTrustDialog open={securityOpen} onOpenChange={setSecurityOpen} />
 
       <Card>
         <CardHeader>
@@ -192,6 +433,205 @@ export function MediaStudioPanel() {
               />
             </div>
           </div>
+
+          <div className="rounded-2xl border-2 border-gray-100 bg-gradient-to-b from-white to-slate-50/80 p-4 shadow-[0_4px_0_0_rgb(229_231_235)] sm:p-5">
+            <div className="mb-3 flex flex-col gap-1">
+              <p className="text-sm font-bold text-slate-800">
+                내 목소리로 듣기{" "}
+                <span className="font-medium text-slate-500">
+                  (Listen with My Voice)
+                </span>
+              </p>
+              <p className="text-xs leading-relaxed text-slate-500">
+                아래 문장을 따라 읽으며{" "}
+                <strong className="text-slate-700">{RECORD_MIN_S}~{RECORD_MAX_S}초</strong>{" "}
+                녹음하면 Gemini 1.5 Pro가 피치·톤을 분석합니다.
+              </p>
+              <p className="rounded-xl bg-white/80 px-3 py-2 text-xs italic text-slate-600 ring-1 ring-slate-200/80">
+                「오늘은 제 목소리로 배움을 되새깁니다. 집중 하나, 호흡 하나, 문장 하나가 모두
+                저만의 리듬으로 이어집니다.」
+              </p>
+            </div>
+
+            <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                {voicePhase === "recording" || voicePhase === "analyzing" ? (
+                  <div
+                    className={cn(
+                      "relative flex size-[7.5rem] shrink-0 items-center justify-center sm:size-32",
+                      voicePhase === "analyzing" && "btn-train-voice",
+                    )}
+                    aria-live="polite"
+                  >
+                    <svg
+                      className="size-[7.5rem] shrink-0 -rotate-90 sm:size-32"
+                      viewBox="0 0 120 120"
+                      aria-hidden
+                    >
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r={RING_R}
+                        className="fill-none stroke-slate-200"
+                        strokeWidth="10"
+                      />
+                      <motion.circle
+                        cx="60"
+                        cy="60"
+                        r={RING_R}
+                        className="fill-none stroke-[#1CB0F6]"
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                        strokeDasharray={RING_C}
+                        animate={{
+                          strokeDashoffset:
+                            voicePhase === "analyzing" ? RING_C * 0.25 : dashOffset,
+                        }}
+                        transition={{
+                          strokeDashoffset: {
+                            duration: 0.45,
+                            ease: [0.22, 1, 0.36, 1],
+                          },
+                        }}
+                      />
+                    </svg>
+                    <button
+                      type="button"
+                      disabled={voicePhase === "analyzing"}
+                      onClick={() => {
+                        if (voicePhase !== "recording") return;
+                        if (elapsedRef.current < RECORD_MIN_S) {
+                          setError(
+                            `종료하려면 최소 ${RECORD_MIN_S}초 이상 녹음해 주세요.`,
+                          );
+                          return;
+                        }
+                        finishRecording();
+                      }}
+                      className="absolute inset-0 z-20 flex flex-col cursor-pointer items-center justify-center gap-1 rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-[#1CB0F6]/40 disabled:cursor-default"
+                      aria-label="녹음 종료"
+                    >
+                      {voicePhase === "analyzing" ? (
+                        <>
+                          <Loader2 className="size-7 animate-spin text-[#1CB0F6]" />
+                          <span className="max-w-[9rem] text-[10px] font-semibold leading-tight text-slate-600">
+                            내 목소리의 특징을 분석하고 있습니다...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="size-6 text-[#1CB0F6]" />
+                          <span className="text-xs font-bold tabular-nums text-slate-700">
+                            {recordElapsed.toFixed(1)}s
+                          </span>
+                          <span className="text-[10px] text-slate-500">탭하여 종료</span>
+                        </>
+                      )}
+                    </button>
+                    <VoiceWaveformOverlay
+                      active={voicePhase === "analyzing"}
+                      className="z-10 rounded-full"
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="cyanTactile"
+                    size="lg"
+                    className="btn-train-voice relative min-h-11 gap-2 overflow-hidden rounded-2xl px-5 text-sm sm:min-h-12 sm:px-6 sm:text-base"
+                    onClick={startRecording}
+                  >
+                    {voiceCryptoLocked ? (
+                      <Lock
+                        className="size-4 shrink-0 text-emerald-700"
+                        aria-label="Voice DNA 세션 암호화됨"
+                      />
+                    ) : (
+                      <span aria-hidden>🎙️</span>
+                    )}
+                    내 목소리 학습시키기
+                  </Button>
+                )}
+
+                <div className="group relative flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="flex size-9 items-center justify-center rounded-full border-2 border-gray-100 bg-white text-slate-500 shadow-[0_4px_0_0_rgb(229_231_235)] transition hover:text-[#1CB0F6] active:translate-y-px active:shadow-none"
+                    aria-label="음성 데이터 처리 안내"
+                  >
+                    <Info className="size-4" />
+                  </button>
+                  <span
+                    className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-[min(100vw-2rem,280px)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] leading-snug text-slate-600 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 sm:left-0 sm:translate-x-0"
+                    role="tooltip"
+                  >
+                    원본 음성은 암호화 전송 구간에서만 처리되며, 특징 추출 후 즉시 삭제합니다.
+                    장기 저장되지 않습니다.
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="flex w-full min-w-0 flex-1 flex-col gap-1 sm:max-w-md"
+                role="group"
+                aria-label="출력 음성 선택"
+              >
+                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  Voice switcher
+                </span>
+                <div className="flex rounded-full border-b-2 border-slate-200/80 bg-slate-100/90 p-1 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setOutputVoice("persona")}
+                    className={cn(
+                      "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-xs font-bold transition-all sm:text-sm",
+                      outputVoice === "persona"
+                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+                        : "text-slate-500 hover:text-slate-700",
+                    )}
+                  >
+                    <span aria-hidden>🎭</span>
+                    <span className="truncate">페르소나 음성</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOutputVoice("user")}
+                    className={cn(
+                      "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-xs font-bold transition-all sm:text-sm",
+                      outputVoice === "user"
+                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+                        : "text-slate-500 hover:text-slate-700",
+                    )}
+                  >
+                    <span aria-hidden>👤</span>
+                    <span className="truncate">내 목소리</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {voicePhase === "ready" ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-emerald-700">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <span className="font-medium">
+                  내 목소리 프로파일이 준비되었습니다.
+                  {voiceDemo ? " (데모 분석)" : null}
+                </span>
+                <button
+                  type="button"
+                  className="text-[#1CB0F6] underline underline-offset-2"
+                  onClick={() => {
+                    setUserTtsInstructions(null);
+                    setVoiceDemo(false);
+                    setVoicePhase("idle");
+                  }}
+                >
+                  초기화
+                </button>
+              </div>
+            ) : null}
+          </div>
+
           {error ? (
             <p className="text-destructive text-sm" role="alert">
               {error}
@@ -199,9 +639,10 @@ export function MediaStudioPanel() {
           ) : null}
           <Button
             type="button"
+            variant="chunky"
             disabled={loading || !masterContext.trim()}
             onClick={runPipeline}
-            className="gap-2"
+            className="w-full min-h-11 gap-2 rounded-2xl sm:w-auto sm:min-h-12"
           >
             {loading ? <Loader2 className="size-4 animate-spin" /> : null}
             Phase 1–2 실행 (+ CFO 판단)
@@ -258,17 +699,35 @@ export function MediaStudioPanel() {
                   <Mic className="size-4" />
                   플레이스홀더 MP4 (검은 화면 + 나레이션)
                 </p>
-                <video
-                  className="w-full max-w-xl rounded-lg border"
-                  controls
-                  src={result.render.mp4Url}
-                />
+                <div className="max-w-xl space-y-2">
+                  <video
+                    className="w-full rounded-xl border-2 border-gray-100 shadow-[0_4px_0_0_rgb(229_231_235)]"
+                    controls
+                    src={result.render.mp4Url}
+                  />
+                  <div className="flex justify-center sm:justify-start">
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold tracking-tight text-slate-700">
+                      {vocalBadgeLabel}
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : null}
             {result.render?.combinedAudioUrl && !result.render.mp4Url ? (
               <div className="space-y-2">
                 <p className="font-medium">합성 오디오 (ffmpeg 없음 또는 MP4 실패)</p>
-                <audio controls className="w-full" src={result.render.combinedAudioUrl} />
+                <div className="max-w-xl space-y-2">
+                  <audio
+                    controls
+                    className="w-full rounded-xl border-2 border-gray-100 shadow-[0_4px_0_0_rgb(229_231_235)]"
+                    src={result.render.combinedAudioUrl}
+                  />
+                  <div className="flex justify-center sm:justify-start">
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold tracking-tight text-slate-700">
+                      {vocalBadgeLabel}
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : null}
             {result.render?.sceneAudioPaths?.length ? (
@@ -295,12 +754,17 @@ export function MediaStudioPanel() {
       ) : null}
 
       <Dialog open={hitlOpen} onOpenChange={setHitlOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl border-2 border-gray-100 shadow-[0_4px_0_0_rgb(229_231_235)]">
           <DialogHeader>
             <DialogTitle>CFO — 렌더 승인 (HITL)</DialogTitle>
             <DialogDescription>
               추정 렌더 비용이 한도를 넘었거나 세션 예산을 초과할 수 있습니다. TTS·비디오 API를
               실행하려면 승인하세요.
+              {outputVoice === "user" ? (
+                <span className="mt-2 block text-xs font-medium text-slate-600">
+                  현재 출력 음성: 내 목소리 (학습 지침이 TTS에 전달됩니다)
+                </span>
+              ) : null}
             </DialogDescription>
           </DialogHeader>
           {result ? (
@@ -320,6 +784,7 @@ export function MediaStudioPanel() {
             </Button>
             <Button
               type="button"
+              variant="cyanTactile"
               disabled={resumeLoading}
               onClick={() => approveRender(true)}
             >
@@ -329,6 +794,7 @@ export function MediaStudioPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <GoldenPathCoach />
     </div>
   );
 }

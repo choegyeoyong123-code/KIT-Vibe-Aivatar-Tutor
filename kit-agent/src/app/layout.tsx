@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter, Manrope } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 import {
@@ -9,10 +9,19 @@ import {
   SITE_TITLE_DEFAULT,
   siteMetadataBase,
 } from "@/lib/site-config";
+import { workshopUiUxHtmlProps } from "@/lib/workshop-ui-ux";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/** STITCH / DESIGN.md — 본문 Inter, 헤드라인 Manrope */
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -80,12 +89,24 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={cn("h-full antialiased", geistSans.variable, geistMono.variable)}
+      {...workshopUiUxHtmlProps()}
+      className={cn(
+        "h-full scroll-smooth antialiased",
+        inter.variable,
+        manrope.variable,
+        geistMono.variable,
+      )}
     >
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+        />
+      </head>
       <body
         className={cn(
-          geistSans.className,
-          "min-h-full flex flex-col bg-[#FFFFFF] text-[#4B4B4B] antialiased",
+          inter.className,
+          "min-h-full flex flex-col bg-[#FFFFFF] text-[#4B4B4B] antialiased selection:bg-emerald-200/45 selection:text-pw-on-surface",
         )}
       >
         {children}

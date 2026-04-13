@@ -36,6 +36,7 @@ export function middleware(request: NextRequest) {
       "Strict-Transport-Security",
       "max-age=63072000; includeSubDomains; preload",
     );
+    res.headers.set("Referrer-Policy", "no-referrer");
   }
   return res;
 }

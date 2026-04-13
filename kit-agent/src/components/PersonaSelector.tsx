@@ -51,7 +51,13 @@ export function PersonaSelector() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => selectPersona(p.id)}
+                onClick={() => {
+                  selectPersona(p.id);
+                  if (p.id === "metaphor_mage") {
+                    window.dispatchEvent(new CustomEvent("golden-persona-pancake"));
+                  }
+                }}
+                data-golden-target={p.id === "metaphor_mage" ? "pancake-wizard" : undefined}
                 className={cn(
                   "flex min-h-[120px] flex-col rounded-2xl border-2 border-gray-100 bg-white p-4 text-left transition-[transform,border-color,box-shadow] duration-150",
                   "border-b-4 border-b-gray-200/90 active:translate-y-1 active:border-b-2",

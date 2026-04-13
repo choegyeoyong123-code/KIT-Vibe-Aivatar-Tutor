@@ -8,23 +8,15 @@ import {
   Sparkles,
   BookOpen,
   ClipboardList,
-  DollarSign,
   ShieldAlert,
-  ShieldCheck,
   Terminal,
   Zap,
-  Video,
-  Bot,
-  Shield,
   Send,
 } from "lucide-react";
 import type { PrivacyTerminalPhase } from "@/components/privacy-security-terminal";
 import { AgentTraceTerminal } from "@/components/dashboard/agent-trace-terminal";
-import { CharacterDressingOverlay } from "@/components/dashboard/character-dressing-overlay";
 import { SummaryStreamSkeleton } from "@/components/dashboard/summary-stream-skeleton";
 import { SafeHydration } from "@/components/safe-hydration";
-import { TrustInnovationSection } from "@/components/trust-innovation-section";
-import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -71,33 +63,37 @@ import {
 } from "@/lib/agent/persona/persona-presets";
 import { usePersonaGallery } from "@/components/persona-gallery-context";
 import { useEducationalPersona } from "@/components/educational-persona-context";
-import { KitLearningHeader } from "@/components/kit-learning-header";
+import { ZenLearningHeader } from "@/components/zen-learning-header";
 import {
-  inferenceModeToVendorModelId,
-  type InferenceCostMode,
-} from "@/constants/vendor-models";
+  MultimodalLearningModal,
+  type MultimodalStudioTab,
+} from "@/components/multimodal-learning-modal";
+import { ZenSlimPersonaRail } from "@/components/zen-slim-persona-rail";
+import { AgentThinkingStepper } from "@/components/agent-thinking-stepper";
+import { inferenceModeToVendorModelId } from "@/constants/vendor-models";
+import { useWorkshopExperience } from "@/components/workshop-experience-context";
+import { LearningControlSidebar } from "@/components/learning-control-sidebar";
+import { WorkshopToastStack } from "@/components/workshop-toast-stack";
+import { WorkshopMobileDock } from "@/components/workshop-mobile-dock";
+import { GoldenPathCoach } from "@/components/golden-path-coach";
+import {
+  MEDIA_STUDIO_MOCK_STEPS,
+  MOCK_HEADER_STUDIO_QUIZ,
+  VISUAL_LAB_MOCK_STEPS,
+} from "@/lib/dashboard/header-studio-mock";
 import { useSecurityPulse } from "@/components/security-pulse-context";
 import { useTokenSavings } from "@/components/token-savings-context";
 import { computeSecurityPulseSnapshot } from "@/lib/security-pulse-state";
-import { kitSidebarRailClass } from "@/lib/glass-styles";
-import { LearningControlSidebar } from "@/components/learning-control-sidebar";
 import { TokenSavingsReport } from "@/components/token-savings-report";
 import { TutorMarkdown } from "@/components/tutor-markdown";
 import { TutorReplyShell, UserChatBubble } from "@/components/chat-bubbles";
-import { TodayLearningProgress } from "@/components/today-learning-progress";
-import { CollaborationPathStepper } from "@/components/collaboration-path-stepper";
-import { FinOpsModelInsightWidget } from "@/components/award/finops-model-insight-widget";
-import { AgentDebateCard } from "@/components/award/agent-debate-card";
-import { SecurityAuditPulseIndicator } from "@/components/award/security-audit-pulse-indicator";
 import { SessionReceiptDrawer } from "@/components/award/session-receipt";
-import { GrowthRadarChart } from "@/components/career/growth-radar-chart";
 import { ImpactPortfolioWidget } from "@/components/career/impact-portfolio-widget";
 import {
-  RADAR_LABELS_KO,
+  RADAR_AXIS_ORDER,
   bumpRadarOnCompletion,
   defaultRadarScores,
   deriveRadarScores,
-  type RadarAxisKey,
   type RadarScores,
 } from "@/lib/employability-radar";
 
@@ -107,27 +103,6 @@ const dashCardGlass =
 const dashShellBg = "flex min-h-0 flex-1 flex-col bg-white";
 
 const INPUT_USD_SAVINGS_PER_1K = 0.0025;
-
-/** UI 미터 스케일 (USD) */
-const COST_METER_MAX_USD = 1;
-
-/** 서버·클라이언트 동일 출력(하이드레이션 안전) — 트레이스 ISO 시각 표시 */
-const GUARDIAN_TRACE_CLOCK = new Intl.DateTimeFormat("ko-KR", {
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: false,
-  timeZone: "Asia/Seoul",
-});
-
-function formatGuardianTraceTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return GUARDIAN_TRACE_CLOCK.format(d);
-}
-
-/** 데모용 합성 로그 — 렌더 시점 시계를 쓰면 SSR/CSR 1초 차이로 하이드레이션 실패 */
-const GUARDIAN_SYNTHETIC_TIME = "—";
 
 // OPTIMIZE: 매 렌더마다 새 배열을 만들지 않아 하위 map·참조 동일성 유지
 const SMART_SUGGESTIONS: readonly { label: string; text: string }[] = [
@@ -206,14 +181,28 @@ const QuizPanel = memo(function QuizPanel({ quiz }: { quiz: FinalQuiz }) {
 
 QuizPanel.displayName = "QuizPanel";
 
+type HeaderStudioHud =
+  | { kind: "idle" }
+  | { kind: "visual" | "media"; step: number; label: string };
+
 export function LearningDashboard() {
-  const { educationalPersonaSystemPrompt } = useEducationalPersona();
+  const { educationalPersonaSystemPrompt, selectedPersona } = useEducationalPersona();
   const { selectedPersonaId } = usePersonaGallery();
+  const {
+    inferenceMode,
+    setInferenceMode,
+    sessionCostUsd,
+    emotionalFeedback,
+    accentHex,
+    pushToast,
+  } = useWorkshopExperience();
   const { recordFromSnapshot, setLiveSnapshot, cumulativeSavedTokens } =
     useTokenSavings();
   const [finOpsReportOpen, setFinOpsReportOpen] = useState(false);
   const [sessionReceiptOpen, setSessionReceiptOpen] = useState(false);
-  const { setSnapshot: setSecurityPulseSnapshot } = useSecurityPulse();
+  const [studioModalOpen, setStudioModalOpen] = useState(false);
+  const [studioModalTab, setStudioModalTab] = useState<MultimodalStudioTab>("visual");
+  const { setSnapshot: setSecurityPulseSnapshot, snapshot: securitySnapshot } = useSecurityPulse();
   const finOpsLedgerRef = useRef(0);
   const lastRunHadVideoOrImageRef = useRef(false);
   const formId = useId();
@@ -236,7 +225,11 @@ export function LearningDashboard() {
   const [vercelAsyncJobs, setVercelAsyncJobs] = useState(false);
   const [asyncJobStatus, setAsyncJobStatus] = useState<AgentAsyncJobStatus | null>(null);
   const [studentName, setStudentName] = useState("");
-  const [inferenceMode, setInferenceMode] = useState<InferenceCostMode>("eco");
+  const [headerStudioHud, setHeaderStudioHud] = useState<HeaderStudioHud>({
+    kind: "idle",
+  });
+  const [headerMockQuiz, setHeaderMockQuiz] = useState<FinalQuiz | null>(null);
+  const headerStudioTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (pendingInterrupt) setHitlCommandText("");
@@ -512,42 +505,6 @@ export function LearningDashboard() {
     );
   }, [trace, interAgent]);
 
-  const guardianFeed = useMemo(() => {
-    const rows: { key: string; time: string; text: string; kind: "info" | "warn" | "alert" }[] = [];
-    rows.push({
-      key: "g-boot",
-      time: GUARDIAN_SYNTHETIC_TIME,
-      kind: "info",
-      text: "[Security Guardian] Zero-trust 업로드 채널 — 정적 분석 대기",
-    });
-    if (loading || resumeLoading) {
-      rows.push({
-        key: "g-run",
-        time: GUARDIAN_SYNTHETIC_TIME,
-        kind: "warn",
-        text: "[Security Guardian] 에이전트 샌드박스 실행 · I/O 격리 유지",
-      });
-    }
-    const watchPhases = new Set<FeedbackLogEntry["phase"]>([
-      "admin",
-      "cfo",
-      "validate",
-      "policy",
-      "hitl",
-    ]);
-    for (const e of traceUnified.filter((x) => watchPhases.has(x.phase)).slice(-6)) {
-      const clip =
-        e.message.length > 140 ? `${e.message.slice(0, 137)}…` : e.message;
-      rows.push({
-        key: `${e.at}-${e.phase}`,
-        time: formatGuardianTraceTime(e.at),
-        kind: e.phase === "admin" ? "alert" : "info",
-        text: `[${e.phase}] ${clip}`,
-      });
-    }
-    return rows.slice(-14);
-  }, [loading, resumeLoading, traceUnified]);
-
   const videoSynthesisActive = useMemo(() => {
     if (!loading) return false;
     const hint = orchestratorLines.some((l) =>
@@ -561,8 +518,16 @@ export function LearningDashboard() {
   }, [loading, state?.structuredSummary, streamSummary]);
   const summary = displaySummary;
   const quiz = state?.finalQuiz;
+  const showWelcomeZero = useMemo(
+    () =>
+      !summary.trim() &&
+      !loading &&
+      !summarizationInstruction.trim() &&
+      !state &&
+      !streamSummary.trim(),
+    [summary, loading, summarizationInstruction, state, streamSummary],
+  );
   const accCost = state?.accumulatedCost ?? 0;
-  const estCost = state?.estimatedCost ?? 0;
   const tokens = state?.totalTokenUsage ?? 0;
   const loops = state?.loopCount ?? 0;
   const qualityScore = state?.qualityScore;
@@ -596,14 +561,8 @@ export function LearningDashboard() {
   ]);
 
   const [radarScores, setRadarScores] = useState<RadarScores>(() => defaultRadarScores());
-  const [radarBump, setRadarBump] = useState<{ axis: RadarAxisKey; delta: number } | null>(null);
-  const [stepperSkillBump, setStepperSkillBump] = useState<{
-    label: string;
-    points: number;
-  } | null>(null);
   const employabilityBaselineRef = useRef(false);
   const prevPipelineBusyRef = useRef(loading || resumeLoading);
-  const radarBumpTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (employabilityBaselineRef.current) return;
@@ -628,35 +587,7 @@ export function LearningDashboard() {
     const text = (state?.structuredSummary ?? summary).trim();
     if (text.length < 24) return;
 
-    let bumpResult: ReturnType<typeof bumpRadarOnCompletion> | undefined;
-    setRadarScores((prev) => {
-      bumpResult = bumpRadarOnCompletion(prev, text);
-      return bumpResult.next;
-    });
-
-    queueMicrotask(() => {
-      if (!bumpResult) return;
-      if (radarBumpTimerRef.current !== undefined) {
-        window.clearTimeout(radarBumpTimerRef.current);
-      }
-      setRadarBump({ axis: bumpResult.axis, delta: bumpResult.delta });
-      setStepperSkillBump({
-        label: RADAR_LABELS_KO[bumpResult.axis],
-        points: bumpResult.delta,
-      });
-      radarBumpTimerRef.current = window.setTimeout(() => {
-        setRadarBump(null);
-        setStepperSkillBump(null);
-        radarBumpTimerRef.current = undefined;
-      }, 2600);
-    });
-
-    return () => {
-      if (radarBumpTimerRef.current !== undefined) {
-        window.clearTimeout(radarBumpTimerRef.current);
-        radarBumpTimerRef.current = undefined;
-      }
-    };
+    setRadarScores((prev) => bumpRadarOnCompletion(prev, text).next);
   }, [loading, resumeLoading, state?.structuredSummary, summary]);
 
   const careerProofLabel = useMemo(() => {
@@ -675,7 +606,6 @@ export function LearningDashboard() {
         /수동 검토|거버넌스|품질 점수|Manual Review|governance/i.test(r),
       ));
   const sessionBudget = state?.sessionBudgetUsd ?? 2;
-  const consensusNotes = state?.consensusAuditNotes?.trim() ?? "";
   const policyReco = state?.policyRecommendation?.trim() ?? "";
   const policyMatch = state?.policyMatchScore;
   const sourceMappings = state?.sourceMappings ?? [];
@@ -684,11 +614,6 @@ export function LearningDashboard() {
     100,
     Math.round((accCost / Math.max(sessionBudget, 0.01)) * 100),
   );
-  const costMeterPct = Math.min(
-    100,
-    Math.round((accCost / COST_METER_MAX_USD) * 100),
-  );
-
   const finMeasuredPct = useMemo(() => {
     const m = state?.finOps?.measured_performance?.savingsPercentage;
     if (m != null && Number.isFinite(m)) return Math.min(100, Math.max(0, m));
@@ -702,29 +627,25 @@ export function LearningDashboard() {
     [cumulativeSavedTokens],
   );
 
+  const employabilityAvg = useMemo(
+    () => RADAR_AXIS_ORDER.reduce((s, k) => s + radarScores[k], 0) / RADAR_AXIS_ORDER.length,
+    [radarScores],
+  );
+  const securityZenOk = securitySnapshot.phase !== "active";
+
+  const [expertMode, setExpertMode] = useState(false);
+  useEffect(() => {
+    try {
+      const q = typeof window !== "undefined" ? window.location.search : "";
+      setExpertMode(new URLSearchParams(q).get("expert") === "1");
+    } catch {
+      setExpertMode(false);
+    }
+  }, []);
+
   const modelTier = useMemo((): "high" | "eco" => {
     return state?.personaMediaCostTier === "high" ? "high" : "eco";
   }, [state?.personaMediaCostTier]);
-
-  const agentDebateContent = useMemo(() => {
-    const agreedBody =
-      consensusNotes ||
-      "파이프라인이 완료되면 Knowledge_Distiller와 Evidence_Validator의 합의 감사 노트가 여기에 표시됩니다.";
-    return {
-      agentA: {
-        title: "노트 구조·페르소나 톤",
-        body: "핵심 개념을 한 페이지 치트시트 형태로 압축하고, 선택된 페르소나 톤에 맞춰 문장을 다듬습니다.",
-      },
-      agentB: {
-        title: "근거·톤 일관성",
-        body: "영상·PDF 정렬 맵과 인용 후보를 대조하고, 품질 점수가 낮은 구간은 재검토 큐에 올립니다.",
-      },
-      agreed: {
-        title: consensusNotes ? "합의 감사 반영" : "합의안 (대기)",
-        body: agreedBody,
-      },
-    };
-  }, [consensusNotes]);
 
   const sessionReceiptPayload = useMemo(
     () => ({
@@ -760,8 +681,6 @@ export function LearningDashboard() {
     ],
   );
 
-  const securityAuditActive = loading || resumeLoading || Boolean(state);
-
   const privacyPhase: PrivacyTerminalPhase = useMemo(() => {
     if (loading || resumeLoading) return "processing";
     if (pendingInterrupt) return "idle";
@@ -791,6 +710,43 @@ export function LearningDashboard() {
     privacyPhase,
   ]);
 
+  useEffect(() => {
+    return () => {
+      headerStudioTimersRef.current.forEach((t) => clearTimeout(t));
+      headerStudioTimersRef.current = [];
+    };
+  }, []);
+
+  const startHeaderStudioSequence = useCallback(
+    (tab: "visual" | "media") => {
+      if (headerStudioHud.kind !== "idle") return;
+      const steps = tab === "visual" ? VISUAL_LAB_MOCK_STEPS : MEDIA_STUDIO_MOCK_STEPS;
+      headerStudioTimersRef.current.forEach((t) => clearTimeout(t));
+      headerStudioTimersRef.current = [];
+      if (tab === "visual") setHeaderMockQuiz(null);
+      setHeaderStudioHud({ kind: tab, step: 0, label: steps[0] });
+      const t1 = window.setTimeout(() => {
+        setHeaderStudioHud({ kind: tab, step: 1, label: steps[1] });
+      }, 1000);
+      const t2 = window.setTimeout(() => {
+        setHeaderStudioHud({ kind: tab, step: 2, label: steps[2] });
+      }, 2000);
+      const t3 = window.setTimeout(() => {
+        setHeaderStudioHud({ kind: "idle" });
+        pushToast(
+          tab === "visual"
+            ? "Visual Lab · 멀티 에이전트 오케스트레이션 완료"
+            : "Media Studio · 렌더링 파이프라인 동기화 완료",
+        );
+        if (tab === "visual") setHeaderMockQuiz(MOCK_HEADER_STUDIO_QUIZ);
+        setStudioModalTab(tab);
+        setStudioModalOpen(true);
+      }, 3000);
+      headerStudioTimersRef.current = [t1, t2, t3];
+    },
+    [headerStudioHud.kind, pushToast],
+  );
+
   return (
     <SafeHydration
       fallback={
@@ -803,53 +759,53 @@ export function LearningDashboard() {
         </div>
       }
     >
-      <div className={cn(dashShellBg, "flex min-h-0 flex-1 flex-col")}>
-      <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden lg:flex-row">
-        <LearningControlSidebar
-          measuredSavingsPct={finMeasuredPct}
-          totalSavingsUsd={finTotalSavingsUsd}
-          tokensSaved={cumulativeSavedTokens}
-          onOpenFinOpsReport={() => setFinOpsReportOpen(true)}
+      <div
+        className={cn(dashShellBg, "flex min-h-0 flex-1 flex-col bg-[#FFFFFF]")}
+        style={{ ["--kit-workshop-accent" as string]: accentHex }}
+      >
+        <ZenLearningHeader
+          inferenceMode={inferenceMode}
+          onInferenceModeChange={setInferenceMode}
+          disabled={loading}
+          todayProgressPct={todayLearnProgressValue}
+          employabilityAvg={employabilityAvg}
+          savingsPct={finMeasuredPct}
+          securityOk={securityZenOk}
+          onOpenReport={() => setFinOpsReportOpen(true)}
+          onOpenSessionReceipt={() => setSessionReceiptOpen(true)}
+          onOpenVisualLab={() => startHeaderStudioSequence("visual")}
+          onOpenMediaStudio={() => startHeaderStudioSequence("media")}
+          studioVisualRunning={headerStudioHud.kind === "visual"}
+          studioMediaRunning={headerStudioHud.kind === "media"}
+          studioStatusLabel={headerStudioHud.kind === "idle" ? null : headerStudioHud.label}
+          sessionCostUsd={sessionCostUsd}
         />
-
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 md:gap-6">
-          <KitLearningHeader
-            inferenceMode={inferenceMode}
-            onInferenceModeChange={setInferenceMode}
-            onSessionReceipt={() => setSessionReceiptOpen(true)}
-            disabled={loading}
+        <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col gap-3 overflow-hidden px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-0 sm:gap-4 sm:px-4 lg:flex-row lg:items-stretch lg:px-5 lg:pb-3">
+          <LearningControlSidebar
+            measuredSavingsPct={finMeasuredPct}
+            totalSavingsUsd={finTotalSavingsUsd}
+            tokensSaved={cumulativeSavedTokens}
+            onOpenFinOpsReport={() => setFinOpsReportOpen(true)}
           />
+          <ZenSlimPersonaRail />
           <main
-            className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto overflow-x-hidden px-5 pb-28 md:gap-6 md:px-6 md:pb-8"
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-10 lg:gap-4 lg:overflow-hidden lg:pb-6"
             aria-busy={loading || resumeLoading}
           >
-          <FinOpsModelInsightWidget
-            activeModelTier={state?.activeModelTier}
-            personaMediaCostTier={state?.personaMediaCostTier}
-            totalTokenUsage={tokens}
-            finOps={state?.finOps ?? null}
-            loading={loading || resumeLoading}
-            summarizationInstruction={summarizationInstruction}
-            className="shrink-0"
-          />
+          <AgentThinkingStepper loading={loading || resumeLoading} agentPathStep={agentPathStep} />
 
-          <div className="shrink-0 space-y-3 border-b border-gray-100 pb-4">
-            <p className="max-w-3xl font-sans text-sm font-medium leading-relaxed text-[#4B4B4B]">
-              자료를 올리고 파이프라인을 실행하면 요약이 스트리밍됩니다. 에이전트 로그는 하단에서만
-              펼칩니다.
+          <motion.div
+            layout
+            className="shrink-0 rounded-2xl border-2 border-gray-100 bg-white/90 px-4 py-3 shadow-[0_4px_0_0_rgb(229_231_235)]"
+            style={{ borderColor: `${accentHex}55` }}
+          >
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4B4B4B]/50">
+              Emotional Feedback · {selectedPersona?.name ?? "튜터"}
             </p>
-            <TodayLearningProgress
-              value={todayLearnProgressValue}
-              loading={loading || resumeLoading}
-            />
-          </div>
-
-          <AgentDebateCard
-            agentA={agentDebateContent.agentA}
-            agentB={agentDebateContent.agentB}
-            agreed={agentDebateContent.agreed}
-            className="shrink-0"
-          />
+            <p className="mt-1 font-sans text-sm leading-relaxed text-[#4B4B4B]">
+              {emotionalFeedback}
+            </p>
+          </motion.div>
 
           {admin ? (
             <motion.div
@@ -872,18 +828,22 @@ export function LearningDashboard() {
             </motion.div>
           ) : null}
 
-          <Card className={cn(dashCardGlass, "shrink-0")}>
+          <Card className={cn(dashCardGlass, "shrink-0 rounded-3xl border-2 border-gray-100")}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Upload className="size-4" />
             자료 업로드
           </CardTitle>
-          <CardDescription>
-            KIT 강의 PDF와 MP4를 올리면 서버 API에서 PDF는 고정밀 파싱, 영상은 멀티모달
-            모델로 시각·대본형 요약을 시도합니다(키는 서버에만 보관). 수동 대본이 있으면
-            그것을 우선합니다. 요약 스타일 요청 문구는{" "}
-            <span className="font-medium text-foreground">학습 요약</span> 카드 하단 입력창에서
-            작성합니다.
+          <CardDescription className="text-[#4B4B4B]/80">
+            PDF·영상을 올리고 아래에서 요약 스타일을 적은 뒤, 큰 초록 버튼으로 학습을 시작하세요.
+            아바타는{" "}
+            <a
+              href="/avatar-lecture"
+              className="font-medium text-[#1CB0F6] underline-offset-2 hover:underline"
+            >
+              스튜디오
+            </a>
+            에서 이어갈 수 있어요.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1050,21 +1010,25 @@ export function LearningDashboard() {
 
           {error ? (
             <div
-              className="rounded-2xl border-2 border-destructive/25 bg-destructive/[0.06] p-4"
+              className="rounded-2xl border-2 border-amber-200/80 bg-amber-50/50 p-4"
               role="alert"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <p className="min-w-0 flex-1 break-words text-sm leading-relaxed text-destructive">
-                  {error}
-                </p>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-sans text-sm font-medium text-amber-900/90">잠깐만요</p>
+                  <p className="break-words text-sm leading-relaxed text-[#4B4B4B]/90">{error}</p>
+                  <p className="font-sans text-xs text-[#4B4B4B]/60">
+                    파일 형식과 용량을 확인한 뒤 다시 시도해 보세요.
+                  </p>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-9 shrink-0 self-start rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10"
+                  className="h-9 shrink-0 self-start rounded-2xl border-2 border-gray-100 bg-white text-[#4B4B4B] hover:bg-[#FAFAFA]"
                   onClick={() => setError(null)}
                 >
-                  닫기
+                  알겠어요
                 </Button>
               </div>
             </div>
@@ -1080,7 +1044,7 @@ export function LearningDashboard() {
               type="button"
               variant="chunky"
               size="lg"
-              className="h-11 min-w-[200px] px-5"
+              className="h-12 min-w-[min(100%,240px)] rounded-2xl px-6 text-base shadow-[0_4px_0_0_rgb(62,160,1)] sm:min-w-[260px]"
               disabled={loading || files.length === 0}
               onClick={runPipeline}
             >
@@ -1092,7 +1056,7 @@ export function LearningDashboard() {
               ) : (
                 <>
                   <BookOpen className="size-4" />
-                  학습 파이프라인 실행
+                  학습 시작하기
                 </>
               )}
             </Button>
@@ -1100,70 +1064,10 @@ export function LearningDashboard() {
         </CardContent>
       </Card>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-6 lg:min-h-0">
             <Card
               className={cn(
                 dashCardGlass,
-                "relative flex min-h-[260px] flex-col overflow-hidden lg:max-h-[min(calc(100vh-11rem),700px)] lg:min-h-0",
-              )}
-            >
-              <CharacterDressingOverlay active={videoSynthesisActive} />
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base text-[#4B4B4B]">
-                  <Video className="size-5 text-[#1CB0F6]" aria-hidden />
-                  AI Avatar Player
-                </CardTitle>
-                <CardDescription>
-                  아바타·영상 합성 플로우와 연동되는 프리뷰 영역입니다.{" "}
-                  <span className="text-foreground/80">Video_Synthesis_Orchestrator</span> 실행 시
-                  드레싱 애니메이션이 켜집니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-gray-100 bg-[#FAFAFA]">
-                  <motion.div
-                    className="flex flex-col items-center gap-2 text-center"
-                    animate={{
-                      scale: loading ? [1, 1.03, 1] : 1,
-                    }}
-                    transition={{ duration: 2.4, repeat: loading ? Infinity : 0, ease: "easeInOut" }}
-                  >
-                    <div className="flex size-20 items-center justify-center rounded-2xl border-2 border-gray-100 bg-white">
-                      <Bot className="size-10 text-[#1CB0F6]" aria-hidden />
-                    </div>
-                    <p className="max-w-[220px] text-[#4B4B4B]/70 text-xs leading-relaxed">
-                      스트리밍 요약과 병렬로 아바타 출력을 배치하는 AI-Native 레이아웃입니다.
-                    </p>
-                  </motion.div>
-                  {loading ? (
-                    <motion.div
-                      className="absolute inset-x-0 bottom-0 h-1 bg-gray-100"
-                      initial={false}
-                    >
-                      <motion.div
-                        className="h-full bg-[#58CC02]"
-                        animate={{ width: ["0%", "88%", "60%", "100%"] }}
-                        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                      />
-                    </motion.div>
-                  ) : null}
-                </div>
-                <Link
-                  href="/avatar-lecture"
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "lg" }),
-                    "w-full justify-center rounded-2xl border-2 border-gray-100 bg-white text-[#4B4B4B] hover:bg-[#FAFAFA]",
-                  )}
-                >
-                  아바타 스튜디오 열기
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={cn(
-                dashCardGlass,
-                "flex min-h-[280px] flex-1 flex-col overflow-hidden lg:max-h-[min(calc(100vh-11rem),700px)] lg:min-h-0",
+                "flex min-h-[min(48dvh,360px)] flex-1 flex-col overflow-hidden rounded-3xl border-2 border-gray-100 lg:min-h-0 lg:max-h-[min(calc(100dvh-9.5rem),720px)]",
               )}
             >
               <CardHeader className="shrink-0 space-y-3 border-b border-gray-100 pb-3">
@@ -1186,14 +1090,30 @@ export function LearningDashboard() {
                 </CardDescription>
               </CardHeader>
 
-              <CollaborationPathStepper
-                agentPathStep={agentPathStep}
-                skillBump={stepperSkillBump}
-              />
-
               <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-6">
+                    <AnimatePresence>
+                      {showWelcomeZero ? (
+                        <motion.div
+                          key="welcome-zero"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                          className="flex min-h-[140px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gradient-to-b from-white to-[#FAFAFA] px-6 py-10 text-center"
+                        >
+                          <p className="font-heading text-lg font-bold text-[#4B4B4B]">환영합니다</p>
+                          <p className="mt-2 max-w-md text-sm leading-relaxed text-[#4B4B4B]/75">
+                            <span className="text-lg" aria-hidden>
+                              {selectedPersona?.emoji ?? "✨"}
+                            </span>{" "}
+                            {selectedPersona?.name ?? "튜터"}와 함께 자료를 올리고, 초록 버튼으로
+                            학습을 시작하면 이 메시지는 부드럽게 사라집니다.
+                          </p>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
                     {summarizationInstruction.trim() ? (
                       <UserChatBubble label="학습 요청">
                         <p className="whitespace-pre-wrap break-words">{summarizationInstruction.trim()}</p>
@@ -1333,7 +1253,7 @@ export function LearningDashboard() {
                     ) : null}
                   </div>
 
-                  <div className="flex shrink-0 flex-col gap-2 border-t-2 border-gray-100 bg-white p-4">
+                  <div className="flex shrink-0 flex-col gap-2 rounded-2xl border-2 border-gray-100 bg-white p-4 shadow-[0_10px_40px_rgba(15,23,42,0.06)]">
                     <Label htmlFor={`${formId}-sum`} className="font-sans text-xs font-medium text-[#4B4B4B]/75">
                       요약 스타일 요청
                     </Label>
@@ -1370,163 +1290,55 @@ export function LearningDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          <details className="rounded-2xl border-2 border-gray-100 bg-white p-4">
-            <summary className="cursor-pointer list-none font-sans text-sm font-semibold text-[#4B4B4B] [&::-webkit-details-marker]:hidden">
-              <span className="inline-flex items-center gap-2">
-                <Terminal className="size-4 text-[#4B4B4B]/60" aria-hidden />
-                에이전트 로그 (고급)
-              </span>
-            </summary>
-            <div className="mt-4 border-t-2 border-gray-100 pt-4">
-              <AgentTraceTerminal
-                orchestratorLines={orchestratorLines}
-                traceUnified={traceUnified}
-                pipelineActive={loading}
-              />
-            </div>
-          </details>
-
-          <TrustInnovationSection phase={privacyPhase} privacyEpoch={privacyEpoch} />
+          {expertMode ? (
+            <>
+              <details className="rounded-2xl border-2 border-gray-100 bg-white p-4">
+                <summary className="cursor-pointer list-none font-sans text-sm font-semibold text-[#4B4B4B] [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex items-center gap-2">
+                    <Terminal className="size-4 text-[#4B4B4B]/60" aria-hidden />
+                    에이전트 로그 (전문가)
+                  </span>
+                </summary>
+                <div className="mt-4 border-t-2 border-gray-100 pt-4">
+                  <AgentTraceTerminal
+                    orchestratorLines={orchestratorLines}
+                    traceUnified={traceUnified}
+                    pipelineActive={loading}
+                  />
+                </div>
+              </details>
+            </>
+          ) : null}
 
           <AnimatePresence>
             {quiz && quiz.questions.length > 0 ? (
               <QuizPanel key="quiz" quiz={quiz} />
             ) : null}
+            {headerMockQuiz && headerMockQuiz.questions.length > 0 ? (
+              <QuizPanel key="header-mock-quiz" quiz={headerMockQuiz} />
+            ) : null}
           </AnimatePresence>
         </main>
         </div>
 
-        <aside
-          className={cn(
-            kitSidebarRailClass,
-            "flex min-h-0 w-full shrink-0 flex-col gap-4 overflow-y-auto border-t-2 border-gray-100 p-5 lg:h-[calc(100vh-80px)] lg:max-h-[calc(100vh-80px)] lg:w-80 lg:border-l-2 lg:border-t-0 lg:p-6",
-          )}
-        >
-          <GrowthRadarChart
-            className="w-full shrink-0"
-            scores={radarScores}
-            bump={radarBump}
-            meterTitle="Verified Learning Growth Meter"
-          />
-          <Card className={dashCardGlass}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 font-sans text-sm">
-                <DollarSign className="size-4 text-amber-500" />
-                CFO AI · 비용 모니터
-              </CardTitle>
-              <CardDescription className="font-sans text-xs">
-                토큰·예산·품질·Trust. 검증 루프·비용 한도에서 HITL로 전환됩니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                  누적 USD
-                </p>
-                <p className="font-mono text-sm font-semibold">${accCost.toFixed(4)}</p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                  잔여 USD
-                </p>
-                <p
-                  className={`font-mono text-sm font-semibold ${remainingBudget < sessionBudget * 0.15 ? "text-destructive" : ""}`}
-                >
-                  ${remainingBudget.toFixed(4)}
-                </p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                  예산
-                </p>
-                <p className="font-mono text-sm font-semibold">${sessionBudget.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                  예상 USD
-                </p>
-                <p className="font-mono text-sm font-semibold">${estCost.toFixed(4)}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                  토큰 · 루프 · 품질 · r
-                </p>
-                <p className="font-mono text-sm font-semibold">
-                  {tokens.toLocaleString()} · {loops} ·{" "}
-                  {qualityScore != null ? `${qualityScore}/10` : "—"} · r{distillRound}
-                </p>
-              </div>
-              <div className="col-span-2 flex items-center gap-2">
-                <ShieldCheck className="size-4 shrink-0 text-[#58CC02]" aria-hidden />
-                <div>
-                  <p className="font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Trust
-                  </p>
-                  <p className="font-mono text-sm font-semibold">
-                    {trustScore != null && Number.isFinite(trustScore)
-                      ? `${Math.round(trustScore)}/100`
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-              <div className="col-span-2 space-y-2">
-                <p className="font-sans text-[10px] text-muted-foreground">예산 소진</p>
-                <Progress value={budgetBurnPct} className="h-1.5 bg-gray-100 [&>div]:bg-[#58CC02]" />
-                <p className="font-sans text-[10px] text-muted-foreground">
-                  비용 미터 (0–${COST_METER_MAX_USD})
-                </p>
-                <Progress value={costMeterPct} className="h-1.5 bg-gray-100 [&>div]:bg-[#1CB0F6]" />
-              </div>
-              {consensusNotes ? (
-                <p className="col-span-2 font-sans text-[10px] leading-snug text-muted-foreground">
-                  <span className="font-medium text-foreground">감사:</span>{" "}
-                  {consensusNotes.length > 160
-                    ? `${consensusNotes.slice(0, 160)}…`
-                    : consensusNotes}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <Card
-            className={cn(
-              dashCardGlass,
-              "border-emerald-200 bg-emerald-50/40 text-slate-800",
-            )}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 font-sans text-sm text-emerald-800">
-                <Shield className="size-4" />
-                Security Guardian 로그
-              </CardTitle>
-              <CardDescription className="font-sans text-xs text-slate-600">
-                정책·CFO·검증 이벤트 스냅샷(데모 UI).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-40 overflow-y-auto pr-1 font-mono text-[10px] leading-relaxed text-slate-700 sm:text-[11px]">
-              <ul className="space-y-2">
-                {guardianFeed.map((g) => (
-                  <li
-                    key={g.key}
-                    className={cn(
-                      "break-words",
-                      g.kind === "warn" && "text-amber-800",
-                      g.kind === "alert" && "text-rose-700",
-                      g.kind === "info" && "text-slate-800",
-                    )}
-                  >
-                    <span className="text-slate-500">{g.time}</span> {g.text}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </aside>
-      </div>
+      <WorkshopMobileDock
+        onOpenVisualLab={() => startHeaderStudioSequence("visual")}
+        onOpenMediaStudio={() => startHeaderStudioSequence("media")}
+        visualBusy={headerStudioHud.kind === "visual"}
+        mediaBusy={headerStudioHud.kind === "media"}
+      />
+      <WorkshopToastStack />
 
       <TokenSavingsReport open={finOpsReportOpen} onOpenChange={setFinOpsReportOpen} />
+
+      <MultimodalLearningModal
+        open={studioModalOpen}
+        onOpenChange={setStudioModalOpen}
+        defaultTab={studioModalTab}
+      />
+
+      <GoldenPathCoach />
 
       <Dialog
         open={pendingInterrupt}
@@ -1684,7 +1496,6 @@ export function LearningDashboard() {
         </DialogContent>
       </Dialog>
 
-      <SecurityAuditPulseIndicator active={securityAuditActive} />
       <SessionReceiptDrawer
         open={sessionReceiptOpen}
         onOpenChange={setSessionReceiptOpen}

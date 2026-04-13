@@ -9,6 +9,8 @@ export const maxDuration = 300;
 interface Body {
   jobId: string;
   approved: boolean;
+  voiceOutputMode?: "persona" | "user";
+  userVoiceTtsInstructions?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -37,9 +39,34 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const mode =
+      body.voiceOutputMode === "user"
+        ? "user"
+        : (job.voiceOutputMode ?? "persona");
+    const instructionsFromBody =
+      typeof body.userVoiceTtsInstructions === "string"
+        ? body.userVoiceTtsInstructions.trim() || null
+        : undefined;
+    const userVoiceTtsInstructions =
+      instructionsFromBody !== undefined
+        ? instructionsFromBody
+        : job.userVoiceTtsInstructions ?? null;
+
+    if (mode === "user" && !userVoiceTtsInstructions) {
+      return NextResponse.json(
+        {
+          error:
+            "내 목소리 모드에서는 학습된 음성 지침이 필요합니다. Media Studio에서 음성을 등록한 뒤 다시 시도하세요.",
+        },
+        { status: 400 },
+      );
+    }
+
     const render = await runMediaRenderPipeline({
       jobId: body.jobId,
       script: job.script,
+      userVoiceTtsInstructions:
+        mode === "user" ? userVoiceTtsInstructions : null,
     });
 
     return NextResponse.json({

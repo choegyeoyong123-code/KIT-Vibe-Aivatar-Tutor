@@ -369,7 +369,7 @@ export function AvatarLecturePanel() {
           </p>
         </div>
         <Link
-          href="/"
+          href="/dashboard"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
           ← 대시보드

@@ -15,12 +15,18 @@ export async function synthesizeSceneDialogues(input: {
   jobId: string;
   scenes: { scene_id: string; dialogue: string }[];
   personaVoiceKey?: "shin-chan" | "neutral-educator";
+  /** 사용자 음색 근사 — gpt-4o-mini-tts + instructions (Gemini 분석 기반) */
+  userVoiceTtsInstructions?: string | null;
 }): Promise<{
   results: TtsSceneResult[];
   ttsEstimateUsd: number;
 }> {
   const key = process.env.OPENAI_API_KEY;
-  const model = process.env.MEDIA_TTS_MODEL ?? "tts-1";
+  const instructions = input.userVoiceTtsInstructions?.trim();
+  const useInstructionalTts = Boolean(instructions);
+  const model = useInstructionalTts
+    ? process.env.MEDIA_TTS_MODEL_WITH_VOICE ?? "gpt-4o-mini-tts"
+    : process.env.MEDIA_TTS_MODEL ?? "tts-1";
   const voiceShin =
     process.env.MEDIA_TTS_VOICE_SHINCHAN ?? process.env.MEDIA_TTS_VOICE ?? "nova";
   const voiceNeutral =
@@ -72,18 +78,23 @@ export async function synthesizeSceneDialogues(input: {
       continue;
     }
 
+    const payload: Record<string, unknown> = {
+      model,
+      voice,
+      input: text,
+      response_format: "mp3",
+    };
+    if (useInstructionalTts && instructions) {
+      payload.instructions = instructions;
+    }
+
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        voice,
-        input: text,
-        response_format: "mp3",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
