@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "sync:app": "node scripts/sync-app-from-kit-agent.mjs",
+    "prebuild": "npm run sync:app",
+    "dev": "npm run sync:app && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
