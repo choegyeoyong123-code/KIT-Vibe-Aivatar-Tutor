@@ -1,1 +1,77 @@
-"Beyond Coding, Sing Your Logic" > 자율 에이전트 오케스트레이션 기반 차세대 지능형 학습 플랫폼📌 1. Project OverviewVIBE-SOLO-SYNC는 제1회 KIT Vibe-Coding 공모전의 '학습 경험 혁신' 분야를 타겟으로 개발된 MVP입니다. 기존의 텍스트 중심 코딩 교육에서 벗어나, 사용자의 음성을 학습한 AI가 복잡한 로직을 랩이나 노래로 변환하여 메타인지 효과를 극대화하는 혁신적인 교육 솔루션을 제안합니다.공모 주제: 차세대 교육 서비스 솔루션핵심 가치: 개인화 학습 시스템 및 AI 포트폴리오 코칭제출 일자: 2026년 4월 13일🧠 2. AI Architecture: Multi-Agent Orchestration본 프로젝트는 단일 모델의 한계를 극복하기 위해 다중 AI 에이전트 협업 체계를 구축하였습니다. 이는 심사 기준 중 AI 활용 능력과 기술적 완성도를 증명하는 핵심 지표입니다.에이전트 페르소나적용 모델핵심 전략 및 역할Main ArchitectClaude 3.5 Sonnet전체 학습 시나리오 설계 및 자율 에이전트 통신 조율Multimedia MasterGemini 1.5 Pro영상/오디오 심층 분석 및 사용자 음성 특징(Fingerprint) 추출Visual ScoutGemini 1.5 FlashVisual Lab: 이미지 및 영상 내 기술 문서 실시간 JSON 그라운딩Consensus AuditorGPT-4o-mini & Gemini 2.0 Flash다중 합의 시스템을 통한 교육적 환각(Hallucination) 방지FinOps Manager (CFO)CFO Agent실시간 토큰 사용량 모니터링 및 모델 스위칭을 통한 비용 최적화✨ 3. Key Features🎙️ Media Studio: Listen with My Voice기능: 사용자의 5~10초 음성 샘플을 분석하여 AI 튜터의 목소리를 사용자의 목소리로 변환.기술: Gemini 3.1 Pro 기반 음성 지문 추출 및 Vercel Edge 대응 비동기 폴링(202 + jobId) 처리.🖼️ Visual Lab: Image-to-Quiz기능: 캡처한 코드 이미지나 강의 자료를 업로드하면 즉시 핵심 요약을 생성하고 복습 퀴즈 도출.기술: Gemini 1.5 시리즈의 멀티모달 추론을 통한 정밀 데이터 추출.💰 CFO Agent (FinOps Optimization)전략: 유지보수성 및 재현성을 위해 구현된 전용 에이전트.효과: ECO/HIGH 모드 스위칭을 통해 불필요한 고성능 모델 호출을 방지하여 토큰 소모량 80% 이상 절감.🛡️ 4. Security & Compliance대학교수 및 전문 강사진의 심사 기준인 **실무 적합성(사용자 경험 및 신뢰성)**을 위해 대한민국 개인정보 보호법을 준수합니다.PIPA Compliance: 개인정보 보호법 제35조~37조에 의거하여 사용자의 열람·정정·삭제 권리를 보장하는 Security Pulse UI 구축.Data Integrity: SHA-256 체크섬을 통한 학습 데이터 무결성 검증 및 세션 종료 후 원본 음성 데이터 즉시 파기(Volatile Memory 처리).🎨 5. UI/UX: Pristine WorkshopSTITCH로 제작된 미니멀리즘 UI는 모든 디바이스에서 무결성 가시성을 보장합니다.Responsive Breakpoints:📱 Mobile: 390 X 884 (Safe Area 적용)tablets Tablet: 768 X 1024 (2열 그리드 최적화)💻 Desktop: 1280 X 1024 (사이드바 고정 레이아웃)🛠 6. Tech StackDevelopment: Cursor IDE, Claude Code (OPUS 4.6), v0Frontend: Next.js, Tailwind CSS, Lucide IconsDeployment: Vercel (CI/CD 파이프라인 구축)Data: OpenAI text-embedding-3-small (정책 정렬), Vector DB📈 7. 심사평 대응 핵심 포인트 (For Judges)외부 강사: CURSOR와 v0를 활용한 압도적인 개발 생산성과 코드 품질 확인 가능.대학 교수: 교육 공학적 관점의 메타인지 학습 모델과 데이터 보안 프로토콜의 엄격함 강조.내부 강사: 실제 교육 현장(KIT)에서 즉시 도입 가능한 실무 적합성 및 CFO 에이전트를 통한 운영 경제성 확보.
+VIBE-SOLO-SYNC
+Beyond Coding, Sing Your Logic
+자율 에이전틱 AI 오케스트레이션 기반 차세대 지능형 학습 플랫폼
+
+[1. 프로젝트 정의 및 추진 배경]
+
+본 프로젝트는 제1회 KIT Vibe-Coding Contest의 '학습 경험 혁신' 분야를 선도하기 위해 기획된 차세대 교육 솔루션입니다. AI 기술의 비약적 발전으로 기존의 코딩 중심 개발 방식에서 벗어나, AI를 활용한 서비스 설계 역량이 핵심 경쟁력이 된 시대적 흐름을 반영하였습니다. VIBE-SOLO-SYNC는 개인 개발자가 기획부터 배포까지 빠르게 MVP를 구축할 수 있는 환경을 증명하며, 교육 산업에 적용 가능한 혁신적인 AI 서비스 모델을 제시합니다.
+
+행사명: 제1회 KIT Vibe-Coding Contest
+
+슬로건: AI 네이티브, 새로운 인재의 기준
+
+공모 주제: 교육 전반을 혁신할 수 있는 AI 기반 서비스 제안 및 MVP 구현
+
+최종 제출일: 2026년 4월 13일
+
+[2. 제작 당시 최신 기술 스택 채택 이유]
+
+VIBE-SOLO-SYNC는 프로젝트 구현에 반드시 필요한 최첨단 기술을 보유한 2026년형 최신 모델들을 엄선하여 제작되었습니다.
+
+CURSOR IDE & 클로드 코드 OPUS 4.6: 복잡한 백엔드 구조와 자율 에이전트 간의 정교한 통신 로직을 설계하기 위해 현존하는 최고의 추론 능력을 갖춘 최신 엔진을 선택했습니다.
+
+GEMINI 3 & 3.1 PRO: 멀티모달 데이터 처리 및 사용자 음성 특징(Fingerprint) 추출을 위해 최신 비전 및 오디오 기술을 보유한 모델을 핵심 엔진으로 채택했습니다.
+
+STITCH (Pristine UI): Apple 스타일의 미니멀리즘과 촉각적 피드백을 신속하고 정밀하게 코드화할 수 있는 최신 디자인 자동화 도구를 사용했습니다.
+
+[3. 멀티 에이전트 오케스트레이션 전략]
+
+기술적 완성도와 AI 활용 능력을 심사하는 6인의 심사위원단(외부/내부 강사 및 대학교수)을 위해 고도화된 에이전트 체계를 구축했습니다.
+
+Main Architect (Claude 3.5 Sonnet): 시스템의 중추로서 전체 교육 시나리오를 설계하고 각 에이전트의 흐름을 조율합니다.
+
+Multimedia Master (Gemini 1.5 Pro): 로컬 mp4 파일의 심층 분석과 '내 목소리 학습' 기능을 담당하는 시청각 전문가입니다.
+
+Visual Scout (Gemini 1.5 Flash): Visual Lab을 통해 이미지와 영상 자료에서 핵심 요약을 추출하고 JSON 데이터를 생성하는 시각 분석 에이전트입니다.
+
+Consensus Auditor (Gemini 2.0 Flash & GPT-4o-mini): 교육적 신뢰성을 위해 환각 현상을 실시간으로 교차 검증하는 다중 합의 시스템입니다.
+
+CFO Agent (FinOps): 토큰 낭비를 감시하고 ECO/HIGH 모드 전환을 관리하여 운영 비용의 82% 이상을 절감하는 자원 최적화 에이전트입니다.
+
+Memory Librarian (text-embedding-3-small): 영상 자료와 PDF 정책 문서 간의 정밀한 임베딩 정렬을 수행합니다.
+
+[4. 핵심 기능 및 혁신 시나리오]
+
+심사 기준인 실무 적합성과 창의성을 극대화한 기능들입니다.
+
+Media Studio (Listen with My Voice): 사용자의 음성을 5~10초간 학습하여 AI 튜터의 목소리를 사용자의 목소리로 변환합니다. 이는 자신의 목소리에 더 활발하게 반응하는 뇌의 특성을 활용한 메타인지 강화 전략입니다.
+
+Visual Lab (Interactive Quiz): 수강 중인 강의 자료(PDF/Text/Video)를 업로드하면 AI가 핵심 요약을 생성하고 복습 퀴즈를 즉시 도출합니다.
+
+5인 5색 페르소나 튜터: 퀘스트 마스터, 비유의 마술사, 페어 메이트, 실전 압축 CTO, 딥다이브 교수 등 학습 스타일에 맞춘 5가지 AI 가이드를 제공합니다.
+
+[5. 기술적 완성도 및 최적화 전략]
+
+Vercel Edge 대응 (Strategy 11): 202 + jobId 비동기 폴링 기법을 적용하여 무거운 AI 작업 시 발생하는 504 타임아웃 에러를 원천 차단하고 안정적인 배포 상태를 유지합니다.
+
+마이크 권한 연동 보안: 브라우저의 마이크 권한 상태를 실시간 감지하며, 권한 미확보 시 CFO 에이전트가 API 호출을 차단하여 불필요한 자원 소모를 방지합니다.
+
+비전공자 배려 UX: 기술적 대기 시간을 '음식점 번호표'에 비유하는 등 쉬운 설명 문구를 추가하여 사용자 경험의 문턱을 낮췄습니다.
+
+[6. 법적 권리 보호 및 데이터 무결성]
+
+대학교수진의 심사 기준인 실무 적합성과 신뢰성을 충족합니다.
+
+PIPA 준수: 대한민국 개인정보 보호법 제35조~37조를 준수하며, 방패 아이콘 클릭 시 사용자의 법적 권리를 안내하는 모달 시스템을 구축했습니다.
+
+데이터 처리 원칙: 사용자의 음성 데이터는 로컬 세션에서 휘발성으로 처리되며, SHA-256 체크섬을 통해 데이터 무결성을 실시간 검증합니다.
+
+[7. Universal UI 및 반응형 해상도 설정]
+
+STITCH가 제작한 Pristine Workshop 디자인은 모든 기기에서 짤림 없는 가시성을 보장합니다.
+
+Mobile (390 X 884): 하단 내비게이션 및 세이프 에어리어 적용
+
+Tablet (768 X 1024): 2열 그리드 확장 및 최적화된 시각적 위계
+
+Desktop (1280 X 1024): 고정 사이드바 및 전 기능을 한눈에 조망하는 대시보드
