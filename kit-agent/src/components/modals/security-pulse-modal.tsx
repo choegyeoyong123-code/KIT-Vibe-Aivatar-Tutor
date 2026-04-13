@@ -19,7 +19,7 @@ export type SecurityTrustDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/** 대한민국 개인정보 보호법 — 열람·정정·삭제·처리정지 권리 요약 (UI 안내용, 구체 행사는 운영 정책·법령에 따름) */
+/** 대한민국 개인정보 보호법 — 제35·36·37조 핵심 (UI 안내용, 구체 행사는 법령·처리방침·운영 채널에 따름) */
 function LegalRightsPipaSection() {
   return (
     <section
@@ -33,39 +33,94 @@ function LegalRightsPipaSection() {
         사용자의 법적 권리
       </p>
       <p className="mt-1 text-xs font-semibold leading-snug text-slate-800">
-        「개인정보 보호법」에 따른 정보주체 권리 (VIBE-SOLO-SYNC 학습·세션 환경 안내)
+        「개인정보 보호법」 제35조·제36조·제37조 요약
       </p>
       <ul className="mt-3 space-y-3 border-t border-slate-200/80 pt-3 text-sm leading-relaxed text-slate-700">
         <li>
           <strong className="text-slate-900">제35조(개인정보의 열람)</strong>
           <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
-            정보주체는 개인정보처리자가 처리하는 개인정보에 대한 열람을 요구할 수 있습니다. 다만,
-            법령에 따라 열람이 제한될 수 있습니다. 본 서비스에서 처리되는 학습·세션 데이터의 열람
-            요청 절차는 운영자가 정한 채널(문의·설정)을 통해 접수됩니다.
+            정보주체는 개인정보처리자가 처리하는 <strong className="font-semibold text-slate-800">자신의 개인정보</strong>에
+            대한 열람을 요구할 수 있고, 처리자는 지체 없이 열람할 수 있도록 해야 합니다. 다른
+            사람의 생명·신체를 해할 우려가 있거나 법령에서 정한 사유에 해당하는 경우 등에는
+            열람이 제한되거나 거절될 수 있습니다.
           </span>
         </li>
         <li>
           <strong className="text-slate-900">제36조(개인정보의 정정·삭제)</strong>
           <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
-            정보주체는 개인정보의 정정 또는 삭제를 요구할 수 있습니다. 처리 목적의 달성·보관
-            기간 경과 등 법령이 정한 사유에 해당하는 경우 삭제가 이루어질 수 있습니다. 잘못된
-            항목에 대해서는 정정 요구를 할 수 있습니다.
+            정보주체는 처리 중인 개인정보가 사실과 다를 경우 <strong className="font-semibold text-slate-800">정정</strong>을,
+            법령이 정한 삭제 사유에 해당할 때 <strong className="font-semibold text-slate-800">삭제</strong>를 각각 요구할 수
+            있습니다. 처리자는 위법한 처리가 확인되면 지체 없이 삭제 등 조치를 하고, 다른 법령에
+            따라 보존해야 하는 경우 등에는 삭제가 제한될 수 있습니다.
           </span>
         </li>
         <li>
           <strong className="text-slate-900">제37조(개인정보의 처리정지 등)</strong>
           <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
-            정보주체는 개인정보 처리의 정지를 요구할 수 있으며, 법 제18조 제2항에 해당하는 경우
-            등 법령에 따라 처리정지 요구가 거절될 수 있습니다. 자동화된 결정에 대한 설명 등
-            법이 정한 권리는 각 조항에 따릅니다.
+            정보주체는 법이 정한 사유(예: 법령 위반에 의한 처리, 동의 철회 후에도 불필요한 계속
+            처리 등)에 해당할 때 개인정보 처리의 <strong className="font-semibold text-slate-800">정지</strong>를 요구할 수
+            있습니다. 다만 같은 법 제37조제2항 각 호에 해당하면 처리정지 요구가 거절될 수
+            있습니다. 자동화된 결정 거부·설명 요구 등은 같은 법 제37조제3항 등 별도 규정에
+            따릅니다.
           </span>
         </li>
       </ul>
       <p className="mt-3 rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
         위 내용은 2026년 4월 기준 법령 구조에 따른 <strong className="text-slate-700">요약 안내</strong>
-        입니다. 구체적 행사·예외 사유는 「개인정보 보호법」 전문 및 개인정보 처리방침을
-        따릅니다. 분쟁 시 관할 감독기관(개인정보위원회 등) 안내를 참고하시기 바랍니다.
+        입니다. 조문 문언·예외·절차는 「개인정보 보호법」 전문 및 서비스 개인정보 처리방침을
+        확인하시고, 분쟁·불만은 개인정보위원회 등 관계 기관 안내에 따르시기 바랍니다.
       </p>
+    </section>
+  );
+}
+
+/** 본 UI에서 음성·학습 데이터를 스스로 제어·권리를 행사하는 방법 요약 */
+function ServiceUserRightsGuideSection() {
+  return (
+    <section
+      className="mb-5 rounded-2xl border-2 border-indigo-100/90 bg-gradient-to-br from-indigo-50/90 to-white px-4 py-4 shadow-[0_3px_0_0_rgb(224_231_255)]"
+      aria-labelledby="service-user-rights-heading"
+    >
+      <p
+        id="service-user-rights-heading"
+        className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-700/80"
+      >
+        본 서비스에서의 데이터 제어 · 권리 행사 가이드
+      </p>
+      <p className="mt-1 text-xs font-semibold leading-snug text-indigo-950">
+        음성·학습 관련 정보를 스스로 다루는 방법(요약)
+      </p>
+      <ul className="mt-3 space-y-2.5 border-t border-indigo-200/70 pt-3 text-[13px] leading-relaxed text-slate-700">
+        <li>
+          <strong className="text-slate-900">학습 텍스트(이름·목표·자료 설명 등)</strong>: 대시보드
+          입력란에서 직접 수정·삭제한 뒤 다시 제출할 수 있습니다. 열람·정정에 해당하는 조치로
+          활용하실 수 있습니다.
+        </li>
+        <li>
+          <strong className="text-slate-900">세션·분석 결과</strong>: 새 학습 실행 시 별도의 세션
+          컨텍스트로 이어지며, 장기 보관이 필요 없는 데모·심사 환경에서는 브라우저를 닫거나
+          페이지를 새로 고침한 뒤 필요한 항목만 다시 입력하는 방식으로 노출 범위를 줄일 수
+          있습니다.
+        </li>
+        <li>
+          <strong className="text-slate-900">음성(Media Studio 등)</strong>: UI에서 제공하는
+          암호화·잠금(E2EE) 옵션을 사용할 수 있고, 원본 오디오는 특징 추출 후 즉시 파기되는
+          경로를 따릅니다(아래 기술 보호 항목 참고). 동의 철회·처리 정지 요구는 운영 정책상
+          허용되는 범위에서 접수 채널을 통해 진행됩니다.
+        </li>
+        <li>
+          <strong className="text-slate-900">브라우저 로컬 설정</strong>: 튜터링 톤 등 일부
+          선호는 이 기기의 <code className="rounded bg-slate-100 px-1 text-[11px]">localStorage</code>에만
+          저장됩니다. 삭제·초기화는 브라우저의 사이트 데이터 삭제 또는 개발자 도구를 통해
+          수행할 수 있습니다.
+        </li>
+        <li>
+          <strong className="text-slate-900">법 제35·36·37조에 따른 공식 요청</strong>: 열람,
+          정정·삭제, 처리정지 등은 서비스의 <strong className="text-slate-900">개인정보 처리방침에 기재된
+          연락처</strong>(또는 운영자 지정 채널)로 신청해 주십시오. 신원 확인 후 법령에 따른
+          기한·절차로 답변드립니다.
+        </li>
+      </ul>
     </section>
   );
 }
@@ -130,6 +185,7 @@ export function SecurityTrustDialog({
               완료 후 즉시 제거됩니다.
             </div>
             <LegalRightsPipaSection />
+            <ServiceUserRightsGuideSection />
             <DataVolatilityMeter />
             <ul className="list-disc space-y-3 pb-1 pl-5 text-sm leading-relaxed text-slate-700">
               <li>

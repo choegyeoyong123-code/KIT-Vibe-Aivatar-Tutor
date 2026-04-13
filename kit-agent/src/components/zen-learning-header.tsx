@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import {
   BarChart3,
   Clapperboard,
@@ -15,6 +15,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { EcoHighModelSwitcher, type InferenceCostMode } from "@/components/ModelSwitcher";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import {
+  UserSettings,
+  type TutoringTonePreference,
+} from "@/components/user-settings";
+import { SecurityTrustDialog } from "@/components/security-trust-dialog";
 
 const contestYear = () => new Date().getFullYear();
 
@@ -48,6 +53,15 @@ export interface ZenLearningHeaderProps {
   /** 세션 누적 추정 비용 USD (동기: currentCost) */
   sessionCostUsd?: number | null;
   className?: string;
+  /** 프로필(나) 패널 — 표시 이름 */
+  userDisplayName?: string;
+  /** 프로필 패널 — 이메일(데모·연동 계정 문구 등) */
+  userEmail?: string;
+  /** 프로필 패널 — 학습 목표 한 줄·여러 줄 */
+  learningGoalSummary?: string;
+  /** 튜터링 톤 선호 */
+  tutoringTone?: TutoringTonePreference;
+  onTutoringToneChange?: (v: TutoringTonePreference) => void;
 }
 
 /**
@@ -70,12 +84,19 @@ export function ZenLearningHeader({
   studioStatusLabel,
   sessionCostUsd,
   className,
+  userDisplayName = "학습자",
+  userEmail = "",
+  learningGoalSummary = "",
+  tutoringTone = "balanced",
+  onTutoringToneChange,
 }: ZenLearningHeaderProps) {
   const cfoTipId = useId();
-  const currentCost =
-    typeof sessionCostUsd === "number" && Number.isFinite(sessionCostUsd)
-      ? sessionCostUsd
-      : 0;
+  const [userSettingsOpen, setUserSettingsOpen] = useState(false);
+  const [securityTrustOpen, setSecurityTrustOpen] = useState(false);
+  const showSessionCostBadge =
+    typeof sessionCostUsd === "number" &&
+    Number.isFinite(sessionCostUsd) &&
+    sessionCostUsd > 0;
   const savingsRate = Math.max(
     0,
     Math.min(100, Number.isFinite(savingsPct) ? savingsPct : 0),
@@ -87,6 +108,7 @@ export function ZenLearningHeader({
   const progressSafe = Math.max(0, Math.min(100, Number.isFinite(todayProgressPct) ? todayProgressPct : 0));
 
   return (
+    <>
     <header
       className={cn(
         "sticky top-0 z-50 w-full shrink-0 border-b-2 border-gray-100 bg-[#FFFFFF]/95 backdrop-blur-md kit-mobile-reduce-blur",
@@ -165,16 +187,23 @@ export function ZenLearningHeader({
 
         {/* 우: 비용 · 상태 · 역량 · 절감(+Info) · 보안 · 액션 */}
         <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-start gap-2 sm:gap-2.5 lg:justify-end lg:gap-3">
-          <motion.span
-            key={currentCost}
-            initial={{ opacity: 0, y: 2 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="hidden rounded-full border-2 border-cyan-100 bg-cyan-50/90 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-800 sm:inline"
-            title="세션 누적 추정 비용 (currentCost)"
-          >
-            ${currentCost.toFixed(4)} 세션
-          </motion.span>
+          {showSessionCostBadge ? (
+            <motion.span
+              key={sessionCostUsd}
+              initial={{ opacity: 0, y: 2 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="hidden rounded-full border-2 border-cyan-100 bg-cyan-50/90 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-800 sm:inline"
+              title="세션 누적 추정 비용 (sessionCost)"
+            >
+              ${Number(sessionCostUsd).toFixed(4)} 세션
+            </motion.span>
+          ) : (
+            <span
+              className="hidden min-h-[1.625rem] min-w-[6.75rem] shrink-0 rounded-full border-2 border-transparent px-2 py-0.5 sm:inline-block"
+              aria-hidden
+            />
+          )}
           {studioStatusLabel ? (
             <span
               className="max-w-[140px] truncate rounded-lg border border-emerald-200 bg-emerald-50/90 px-2 py-0.5 text-[9px] font-medium text-emerald-900 sm:max-w-[220px] sm:text-[10px]"
@@ -187,9 +216,16 @@ export function ZenLearningHeader({
             className="hidden items-center gap-2 rounded-2xl border-2 border-gray-100 bg-white px-2 py-1.5 shadow-[0_2px_0_0_rgb(229_231_235)] sm:flex"
             title="오늘의 학습 · 역량 평균 (userMastery)"
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-gray-100 bg-[#FAFAFA] font-sans text-[10px] font-bold text-[#4B4B4B]">
+            <button
+              type="button"
+              onClick={() => setUserSettingsOpen(true)}
+              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-gray-100 bg-[#FAFAFA] font-sans text-[10px] font-bold text-[#4B4B4B] outline-none transition-colors hover:border-gray-200 hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2"
+              aria-haspopup="dialog"
+              aria-expanded={userSettingsOpen}
+              aria-label="내 프로필 및 개인 설정"
+            >
               나
-            </div>
+            </button>
             <div className="min-w-[72px] max-w-[88px] shrink-0">
               <p className="font-sans text-[9px] font-medium text-[#4B4B4B]/50">학습</p>
               <Progress value={progressSafe} className="mt-0.5 h-1 bg-gray-100 [&>div]:bg-emerald-500" />
@@ -228,16 +264,21 @@ export function ZenLearningHeader({
             </div>
           </div>
 
-          <span
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235)]"
-            title={securityOk ? "보안 상태 양호" : "보안 모니터링 중"}
+          <button
+            type="button"
+            onClick={() => setSecurityTrustOpen(true)}
+            className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235)] outline-none transition-colors hover:border-gray-200 hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2"
+            title={securityOk ? "보안 상태 양호 — 법적 권리·데이터 제어 안내" : "보안 모니터링 중 — 법적 권리·데이터 제어 안내"}
+            aria-haspopup="dialog"
+            aria-expanded={securityTrustOpen}
+            aria-label="개인정보 보호법상 권리 및 보안·신뢰 안내"
           >
             <ShieldCheck
               className={cn("size-4", securityOk ? "text-emerald-500" : "text-[#4B4B4B]/35")}
               strokeWidth={2}
               aria-hidden
             />
-          </span>
+          </button>
 
           <Button
             type="button"
@@ -264,5 +305,16 @@ export function ZenLearningHeader({
         </div>
       </div>
     </header>
+    <UserSettings
+      open={userSettingsOpen}
+      onOpenChange={setUserSettingsOpen}
+      displayName={userDisplayName}
+      email={userEmail}
+      learningGoal={learningGoalSummary}
+      tutoringTone={tutoringTone}
+      onTutoringToneChange={onTutoringToneChange}
+    />
+    <SecurityTrustDialog open={securityTrustOpen} onOpenChange={setSecurityTrustOpen} />
+    </>
   );
 }

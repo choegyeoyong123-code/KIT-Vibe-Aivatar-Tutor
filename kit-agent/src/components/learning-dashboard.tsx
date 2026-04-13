@@ -64,6 +64,7 @@ import {
 import { usePersonaGallery } from "@/components/persona-gallery-context";
 import { useEducationalPersona } from "@/components/educational-persona-context";
 import { ZenLearningHeader } from "@/components/zen-learning-header";
+import type { TutoringTonePreference } from "@/components/user-settings";
 import {
   MultimodalLearningModal,
   type MultimodalStudioTab,
@@ -103,6 +104,7 @@ const dashCardGlass =
 const dashShellBg = "flex min-h-0 flex-1 flex-col bg-white";
 
 const INPUT_USD_SAVINGS_PER_1K = 0.0025;
+const KIT_TUTORING_TONE_LS = "kit-tutoring-tone";
 
 // OPTIMIZE: 매 렌더마다 새 배열을 만들지 않아 하위 map·참조 동일성 유지
 const SMART_SUGGESTIONS: readonly { label: string; text: string }[] = [
@@ -225,6 +227,16 @@ export function LearningDashboard() {
   const [vercelAsyncJobs, setVercelAsyncJobs] = useState(false);
   const [asyncJobStatus, setAsyncJobStatus] = useState<AgentAsyncJobStatus | null>(null);
   const [studentName, setStudentName] = useState("");
+  const [tutoringTone, setTutoringTone] = useState<TutoringTonePreference>(() => {
+    if (typeof window === "undefined") return "balanced";
+    try {
+      const v = localStorage.getItem(KIT_TUTORING_TONE_LS);
+      if (v === "balanced" || v === "encouraging" || v === "concise") return v;
+    } catch {
+      /* ignore */
+    }
+    return "balanced";
+  });
   const [headerStudioHud, setHeaderStudioHud] = useState<HeaderStudioHud>({
     kind: "idle",
   });
@@ -628,6 +640,46 @@ export function LearningDashboard() {
     return 0;
   }, [state?.finOps]);
 
+  /** 워크숍 HUD: ECO 스텝(0.0001) vs HIGH(0.0005) → 동일 틱 수일 때 HIGH 대비 비용 절감률 */
+  const WORKSHOP_ECO_VS_HIGH_STEP_RATIO = 5;
+  const workshopEcoSavingsPct = useMemo(() => {
+    if (inferenceMode !== "eco") return 0;
+    const s = sessionCostUsd;
+    if (s == null || !Number.isFinite(s) || s <= 0) return 0;
+    return Math.min(
+      95,
+      Math.round(
+        (100 * (WORKSHOP_ECO_VS_HIGH_STEP_RATIO - 1)) / WORKSHOP_ECO_VS_HIGH_STEP_RATIO,
+      ),
+    );
+  }, [inferenceMode, sessionCostUsd]);
+
+  const zenHeaderSavingsPct = useMemo(
+    () => Math.min(100, Math.max(0, Math.max(finMeasuredPct, workshopEcoSavingsPct))),
+    [finMeasuredPct, workshopEcoSavingsPct],
+  );
+
+  const zenUserDisplayName = useMemo(
+    () => (studentName.trim() ? studentName.trim() : "학습자"),
+    [studentName],
+  );
+  const zenLearningGoalSummary = useMemo(() => {
+    const t = summarizationInstruction.trim();
+    if (t) return t;
+    const o = state?.distilledData?.core_learning_objectives?.[0]?.trim();
+    if (o) return o;
+    return "아직 입력된 학습 목표가 없습니다. 왼쪽 패널에서 목표를 적어 주세요.";
+  }, [summarizationInstruction, state?.distilledData?.core_learning_objectives]);
+
+  const handleZenTutoringToneChange = useCallback((v: TutoringTonePreference) => {
+    setTutoringTone(v);
+    try {
+      localStorage.setItem(KIT_TUTORING_TONE_LS, v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const finTotalSavingsUsd = useMemo(
     () => (cumulativeSavedTokens / 1000) * INPUT_USD_SAVINGS_PER_1K,
     [cumulativeSavedTokens],
@@ -775,7 +827,7 @@ export function LearningDashboard() {
           disabled={loading}
           todayProgressPct={todayLearnProgressValue}
           employabilityAvg={employabilityAvg}
-          savingsPct={finMeasuredPct}
+          savingsPct={zenHeaderSavingsPct}
           securityOk={securityZenOk}
           onOpenReport={() => setFinOpsReportOpen(true)}
           onOpenSessionReceipt={() => setSessionReceiptOpen(true)}
@@ -785,6 +837,11 @@ export function LearningDashboard() {
           studioMediaRunning={headerStudioHud.kind === "media"}
           studioStatusLabel={headerStudioHud.kind === "idle" ? null : headerStudioHud.label}
           sessionCostUsd={sessionCostUsd}
+          userDisplayName={zenUserDisplayName}
+          userEmail="(데모) 로컬 세션 · 외부 계정 미연동"
+          learningGoalSummary={zenLearningGoalSummary}
+          tutoringTone={tutoringTone}
+          onTutoringToneChange={handleZenTutoringToneChange}
         />
         <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col gap-3 overflow-hidden px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-0 sm:gap-4 sm:px-4 lg:flex-row lg:items-stretch lg:px-5 lg:pb-3">
           <LearningControlSidebar
