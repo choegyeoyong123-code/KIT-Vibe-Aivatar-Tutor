@@ -50,8 +50,6 @@ export interface ZenLearningHeaderProps {
   studioMediaRunning?: boolean;
   /** 분석 상태 한 줄 (심사용 HUD) */
   studioStatusLabel?: string | null;
-  /** 세션 누적 추정 비용 USD (동기: currentCost) */
-  sessionCostUsd?: number | null;
   className?: string;
   /** 프로필(나) 패널 — 표시 이름 */
   userDisplayName?: string;
@@ -82,7 +80,6 @@ export function ZenLearningHeader({
   studioVisualRunning,
   studioMediaRunning,
   studioStatusLabel,
-  sessionCostUsd,
   className,
   userDisplayName = "학습자",
   userEmail = "",
@@ -93,10 +90,6 @@ export function ZenLearningHeader({
   const cfoTipId = useId();
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [securityTrustOpen, setSecurityTrustOpen] = useState(false);
-  const showSessionCostBadge =
-    typeof sessionCostUsd === "number" &&
-    Number.isFinite(sessionCostUsd) &&
-    sessionCostUsd > 0;
   const savingsRate = Math.max(
     0,
     Math.min(100, Number.isFinite(savingsPct) ? savingsPct : 0),
@@ -187,23 +180,6 @@ export function ZenLearningHeader({
 
         {/* 우: 비용 · 상태 · 역량 · 절감(+Info) · 보안 · 액션 */}
         <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-start gap-2 sm:gap-2.5 lg:justify-end lg:gap-3">
-          {showSessionCostBadge ? (
-            <motion.span
-              key={sessionCostUsd}
-              initial={{ opacity: 0, y: 2 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="hidden rounded-full border-2 border-cyan-100 bg-cyan-50/90 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-800 sm:inline"
-              title="세션 누적 추정 비용 (sessionCost)"
-            >
-              ${Number(sessionCostUsd).toFixed(4)} 세션
-            </motion.span>
-          ) : (
-            <span
-              className="hidden min-h-[1.625rem] min-w-[6.75rem] shrink-0 rounded-full border-2 border-transparent px-2 py-0.5 sm:inline-block"
-              aria-hidden
-            />
-          )}
           {studioStatusLabel ? (
             <span
               className="max-w-[140px] truncate rounded-lg border border-emerald-200 bg-emerald-50/90 px-2 py-0.5 text-[9px] font-medium text-emerald-900 sm:max-w-[220px] sm:text-[10px]"

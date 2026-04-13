@@ -193,7 +193,6 @@ export function LearningDashboard() {
   const {
     inferenceMode,
     setInferenceMode,
-    sessionCostUsd,
     emotionalFeedback,
     accentHex,
     pushToast,
@@ -640,24 +639,8 @@ export function LearningDashboard() {
     return 0;
   }, [state?.finOps]);
 
-  /** 워크숍 HUD: ECO 스텝(0.0001) vs HIGH(0.0005) → 동일 틱 수일 때 HIGH 대비 비용 절감률 */
-  const WORKSHOP_ECO_VS_HIGH_STEP_RATIO = 5;
-  const workshopEcoSavingsPct = useMemo(() => {
-    if (inferenceMode !== "eco") return 0;
-    const s = sessionCostUsd;
-    if (s == null || !Number.isFinite(s) || s <= 0) return 0;
-    return Math.min(
-      95,
-      Math.round(
-        (100 * (WORKSHOP_ECO_VS_HIGH_STEP_RATIO - 1)) / WORKSHOP_ECO_VS_HIGH_STEP_RATIO,
-      ),
-    );
-  }, [inferenceMode, sessionCostUsd]);
-
-  const zenHeaderSavingsPct = useMemo(
-    () => Math.min(100, Math.max(0, Math.max(finMeasuredPct, workshopEcoSavingsPct))),
-    [finMeasuredPct, workshopEcoSavingsPct],
-  );
+  /** Zen 헤더 절약%: FinOps 응답의 측정·추정 절감률만 반영(없으면 0%). 워크숍 휴리스틱 비율은 사용하지 않음. */
+  const zenHeaderSavingsPct = finMeasuredPct;
 
   const zenUserDisplayName = useMemo(
     () => (studentName.trim() ? studentName.trim() : "학습자"),
@@ -836,7 +819,6 @@ export function LearningDashboard() {
           studioVisualRunning={headerStudioHud.kind === "visual"}
           studioMediaRunning={headerStudioHud.kind === "media"}
           studioStatusLabel={headerStudioHud.kind === "idle" ? null : headerStudioHud.label}
-          sessionCostUsd={sessionCostUsd}
           userDisplayName={zenUserDisplayName}
           userEmail="(데모) 로컬 세션 · 외부 계정 미연동"
           learningGoalSummary={zenLearningGoalSummary}
