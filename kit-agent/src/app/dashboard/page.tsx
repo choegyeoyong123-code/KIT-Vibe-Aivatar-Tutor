@@ -31,7 +31,7 @@ export default function DashboardPage() {
               <div
                 className={cn(
                   pageShellClass,
-                  "flex h-dvh min-h-0 flex-col overflow-hidden",
+                  "flex min-h-dvh flex-col overflow-x-hidden overflow-y-auto",
                 )}
               >
                 <PersonaSelector />

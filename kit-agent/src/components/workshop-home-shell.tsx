@@ -20,7 +20,7 @@ export function WorkshopHomeShell() {
     <div
       data-viewport={breakpoint}
       className={cn(
-        "mx-auto flex h-dvh min-h-0 max-w-7xl overflow-hidden bg-pw-surface-container-lowest font-body text-pw-on-surface",
+        "mx-auto flex min-h-dvh max-w-7xl overflow-x-hidden overflow-y-auto bg-pw-surface-container-lowest font-body text-pw-on-surface",
       )}
     >
       <div className={cn("hidden h-full min-h-0 w-72 shrink-0 lg:flex")}>
@@ -29,7 +29,7 @@ export function WorkshopHomeShell() {
 
       <main
         className={cn(
-          "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-white",
           !isDesktop && "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]",
         )}
       >
