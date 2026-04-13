@@ -68,6 +68,12 @@ const LS_SPEECH_RATE_KEY = "kit-learning-speech-rate";
 const LS_COGNITIVE_DEPTH_KEY = "kit-learning-cognitive-depth";
 const LS_DARK_MODE_KEY = "kit-dark-mode-enabled";
 
+function cognitiveDepthLabel(v: LearningCognitiveDepth): string {
+  if (v === "beginner") return "비유 중심";
+  if (v === "advanced") return "심층 분석";
+  return "핵심 요약";
+}
+
 export function WorkshopExperienceProvider({ children }: { children: ReactNode }) {
   const { selectedPersona } = useEducationalPersona();
   const [inferenceMode, setInferenceMode] = useState<InferenceCostMode>("eco");
@@ -153,11 +159,17 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
   }, [inferenceMode]);
 
   const emotionalFeedback = useMemo(() => {
-    return (
+    const base =
       selectedPersona?.emotionalLine ??
-      "튜터를 선택하면 이곳의 감성 피드백과 테마 액센트가 함께 바뀝니다."
-    );
-  }, [selectedPersona?.emotionalLine]);
+      "튜터를 선택하면 이곳의 감성 피드백과 테마 액센트가 함께 바뀝니다.";
+    const depthGuide =
+      learningCognitiveDepth === "beginner"
+        ? "현재 설명 깊이: 비유 중심 — 어려운 개념을 먼저 쉬운 예시로 풉니다."
+        : learningCognitiveDepth === "advanced"
+          ? "현재 설명 깊이: 심층 분석 — 근거와 구조를 더 자세히 제공합니다."
+          : "현재 설명 깊이: 핵심 요약 — 중요한 포인트를 먼저 압축합니다.";
+    return `${base} ${depthGuide}`;
+  }, [selectedPersona?.emotionalLine, learningCognitiveDepth]);
 
   const accentHex = useMemo(
     () => selectedPersona?.accentHex ?? "#34d399",
@@ -217,20 +229,36 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
     if (mediaStudioBusy) return;
     clearSimTimers();
     setMediaStudioBusy(true);
-    setMediaStudioStatusText(MEDIA_STATUS[0]);
+    const depthLabel = cognitiveDepthLabel(learningCognitiveDepth);
+    setMediaStudioStatusText(
+      `${MEDIA_STATUS[0]} (속도 ${learningSpeechRate.toFixed(1)}x · ${depthLabel})`,
+    );
     const schedule = (delay: number, fn: () => void) => {
       const tid = window.setTimeout(fn, delay);
       simTimersRef.current.push(tid);
     };
-    schedule(0, () => setMediaStudioStatusText(MEDIA_STATUS[0]));
-    schedule(1000, () => setMediaStudioStatusText(MEDIA_STATUS[1]));
-    schedule(2000, () => setMediaStudioStatusText(MEDIA_STATUS[2]));
-    schedule(3000, () => {
+    const speedFactor = Math.max(0.67, Math.min(1.5, 1 / learningSpeechRate));
+    schedule(0, () =>
+      setMediaStudioStatusText(
+        `${MEDIA_STATUS[0]} (속도 ${learningSpeechRate.toFixed(1)}x · ${depthLabel})`,
+      ),
+    );
+    schedule(Math.round(1000 * speedFactor), () =>
+      setMediaStudioStatusText(
+        `${MEDIA_STATUS[1]} (속도 ${learningSpeechRate.toFixed(1)}x · ${depthLabel})`,
+      ),
+    );
+    schedule(Math.round(2000 * speedFactor), () =>
+      setMediaStudioStatusText(
+        `${MEDIA_STATUS[2]} (속도 ${learningSpeechRate.toFixed(1)}x · ${depthLabel})`,
+      ),
+    );
+    schedule(Math.round(3000 * speedFactor), () => {
       setMediaStudioBusy(false);
       setMediaStudioStatusText("");
       pushToast("Media Studio 오케스트레이션이 준비되었습니다. 상세 편집은 Media Studio 페이지에서 이어가세요.");
     });
-  }, [clearSimTimers, mediaStudioBusy, pushToast]);
+  }, [clearSimTimers, mediaStudioBusy, pushToast, learningCognitiveDepth, learningSpeechRate]);
 
   const learningPromptPrefix = useMemo(() => {
     const depthKo =
