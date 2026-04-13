@@ -74,30 +74,91 @@ export function VibeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => clearTrainingTimers(), [clearTrainingTimers]);
 
+  const micErrorMessage = useCallback((err: unknown): string => {
+    const n = err instanceof DOMException ? err.name : "";
+    if (n === "NotAllowedError" || n === "PermissionDeniedError") {
+      return "마이크가 차단되었습니다. 주소창 자물쇠 → 사이트 설정에서 마이크를 허용한 뒤, 페이지를 새로고침하고 다시 「학습 시작」을 눌러 주세요.";
+    }
+    if (n === "NotFoundError" || n === "DevicesNotFoundError") {
+      return "입력 마이크를 찾을 수 없습니다. 마이크 연결·시스템의 기본 입력 장치를 확인해 주세요.";
+    }
+    if (n === "NotReadableError" || n === "TrackStartError") {
+      return "마이크를 사용할 수 없습니다. 다른 앱의 마이크 점유를 해제한 뒤 다시 시도해 주세요.";
+    }
+    if (n === "SecurityError") {
+      return "보안 정책으로 마이크를 열 수 없습니다. HTTPS 또는 허용된 출처인지 확인해 주세요.";
+    }
+    if (n === "AbortError") {
+      return "마이크 연결이 중단되었습니다. 다시 「학습 시작」을 눌러 주세요.";
+    }
+    if (n === "OverconstrainedError" || n === "ConstraintNotSatisfiedError") {
+      return "선택한 마이크 설정을 만족할 수 없습니다. 기본 입력 장치로 다시 시도해 주세요.";
+    }
+    return "마이크를 열 수 없습니다. 브라우저에서 권한을 허용했는지 확인한 뒤 다시 시도해 주세요.";
+  }, []);
+
   const simulateVoiceTraining = useCallback(async () => {
     setVoiceTrainingError(null);
     clearTrainingTimers();
     volatileVoiceRef.current = null;
 
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    if (typeof window === "undefined" || typeof navigator === "undefined") {
       setVoiceTrainingError("이 환경에서는 마이크를 사용할 수 없습니다.");
       return;
     }
 
-    let stream: MediaStream | null = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
-    } catch {
+    if (!window.isSecureContext) {
       setVoiceTrainingError(
-        "마이크 접근이 거부되었거나 사용할 수 없습니다. 브라우저에서 권한을 허용한 뒤 다시 눌러 주세요.",
+        "마이크는 보안 연결(HTTPS 또는 localhost)에서만 사용할 수 있습니다. 배포 URL이 https:// 인지 확인해 주세요.",
       );
       return;
     }
+
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) {
+      setVoiceTrainingError("이 브라우저는 마이크 접근을 지원하지 않습니다.");
+      return;
+    }
+
+    try {
+      const perm = await navigator.permissions?.query?.({
+        name: "microphone" as PermissionName,
+      });
+      if (perm?.state === "denied") {
+        setVoiceTrainingError(
+          "마이크 권한이 거부된 상태입니다. 브라우저 설정에서 이 사이트의 마이크를 허용한 뒤 새로고침해 주세요.",
+        );
+        return;
+      }
+    } catch {
+      /* Permissions API 미지원 시 getUserMedia로만 판별 */
+    }
+
+    let stream: MediaStream | null = null;
+    try {
+      stream = await md.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+    } catch (e1) {
+      try {
+        stream = await md.getUserMedia({ audio: true });
+      } catch (e2) {
+        setVoiceTrainingError(micErrorMessage(e2));
+        return;
+      }
+    }
+
+    const track = stream.getAudioTracks()[0];
+    if (!track || track.readyState !== "live") {
+      stream.getTracks().forEach((t) => t.stop());
+      setVoiceTrainingError("마이크 스트림이 활성화되지 않았습니다. 권한 허용 후 다시 시도해 주세요.");
+      return;
+    }
+    track.enabled = true;
 
     setVoiceTrainingActive(true);
     setVoiceTrainingProgress(4);
@@ -193,7 +254,7 @@ export function VibeProvider({ children }: { children: ReactNode }) {
       }, 320 * (i + 1));
       trainingTimersRef.current.push(id);
     });
-  }, [clearTrainingTimers]);
+  }, [clearTrainingTimers, micErrorMessage]);
 
   const value = useMemo<VibeContextValue>(
     () => ({
