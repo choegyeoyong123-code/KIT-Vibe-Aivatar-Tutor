@@ -21,8 +21,6 @@ export function WorkshopSupportDialogs() {
     setLearningSpeechRate,
     learningCognitiveDepth,
     setLearningCognitiveDepth,
-    darkModeEnabled,
-    setDarkModeEnabled,
   } = useWorkshopExperience();
 
   return (
@@ -123,33 +121,6 @@ export function WorkshopSupportDialogs() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Dark Mode</p>
-                      <p className="mt-0.5 text-[11px] text-slate-600">
-                        새로고침 후에도 현재 브라우저 설정을 유지합니다.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={darkModeEnabled}
-                      onClick={() => setDarkModeEnabled(!darkModeEnabled)}
-                      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 transition-colors ${
-                        darkModeEnabled
-                          ? "border-emerald-300 bg-emerald-500/90"
-                          : "border-gray-200 bg-white"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block size-5 transform rounded-full bg-white shadow transition-transform ${
-                          darkModeEnabled ? "translate-x-5" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
               </section>
             </div>
           </SpringDialogSurface>

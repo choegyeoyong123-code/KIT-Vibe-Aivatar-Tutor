@@ -44,8 +44,6 @@ export interface WorkshopExperienceValue {
   setLearningSpeechRate: (v: 0.8 | 1 | 1.2 | 1.5) => void;
   learningCognitiveDepth: LearningCognitiveDepth;
   setLearningCognitiveDepth: (v: LearningCognitiveDepth) => void;
-  darkModeEnabled: boolean;
-  setDarkModeEnabled: (v: boolean) => void;
   learningPromptPrefix: string;
 }
 
@@ -66,7 +64,6 @@ const MEDIA_STATUS = [
 
 const LS_SPEECH_RATE_KEY = "kit-learning-speech-rate";
 const LS_COGNITIVE_DEPTH_KEY = "kit-learning-cognitive-depth";
-const LS_DARK_MODE_KEY = "kit-dark-mode-enabled";
 
 function cognitiveDepthLabel(v: LearningCognitiveDepth): string {
   if (v === "beginner") return "비유 중심";
@@ -102,14 +99,6 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       return "intermediate";
     },
   );
-  const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem(LS_DARK_MODE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
 
   const simTimersRef = useRef<number[]>([]);
 
@@ -135,15 +124,6 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       // ignore
     }
   }, [learningCognitiveDepth]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(LS_DARK_MODE_KEY, darkModeEnabled ? "1" : "0");
-    } catch {
-      // ignore
-    }
-    document.documentElement.classList.toggle("dark", darkModeEnabled);
-  }, [darkModeEnabled]);
 
   useEffect(() => {
     const step = inferenceMode === "eco" ? 0.0001 : 0.0005;
@@ -301,8 +281,6 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       setLearningSpeechRate,
       learningCognitiveDepth,
       setLearningCognitiveDepth,
-      darkModeEnabled,
-      setDarkModeEnabled,
       learningPromptPrefix,
     }),
     [
@@ -325,7 +303,6 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
       startMediaStudioSimulation,
       learningSpeechRate,
       learningCognitiveDepth,
-      darkModeEnabled,
       learningPromptPrefix,
     ],
   );
