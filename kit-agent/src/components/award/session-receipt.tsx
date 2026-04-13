@@ -177,7 +177,11 @@ export function SessionReceiptDrawer({
 
   const [checksum, setChecksum] = useState<string>("");
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setChecksum("");
+      return;
+    }
+    setChecksum("");
     let cancelled = false;
     void sha256Hex(integritySeed).then((hex) => {
       if (!cancelled) setChecksum(hex);
@@ -368,7 +372,7 @@ export function SessionReceiptDrawer({
                     </p>
                   </div>
                   <p className="mt-2 break-all font-mono text-[11px] font-medium leading-relaxed tracking-wide text-[#4B4B4B]">
-                    {checksum || "· · · 계산 중 · · ·"}
+                    {checksum || "검증 대기 중…"}
                   </p>
                   <p className="mt-2 flex items-start gap-2 font-sans text-xs leading-relaxed text-[#4B4B4B]/70">
                     <FileCheck2 className="mt-0.5 size-4 shrink-0 text-[#1CB0F6]" aria-hidden />

@@ -24,7 +24,7 @@ function hashLabel(s: string): number {
   return Math.abs(h);
 }
 
-/** 기술 개념·목표·요약 지시에서 스킬 노드 추출 + 이해도 점수 부여 */
+/** 기술 개념·목표·요약 지시에서 스킬 노드 추출. 점수는 측정값이 있을 때만 0 초과. */
 export function buildSkillMasteryNodes(args: {
   technicalConcepts: { concept: string }[];
   coreObjectives: string[];
@@ -32,9 +32,12 @@ export function buildSkillMasteryNodes(args: {
   qualityScore: number | null;
   trustScore: number | null;
 }): SkillNode[] {
-  const q = args.qualityScore != null && Number.isFinite(args.qualityScore) ? args.qualityScore : 7;
-  const t = args.trustScore != null && Number.isFinite(args.trustScore) ? args.trustScore : 72;
-  const base = clamp(Math.round(52 + q * 3.2 + t * 0.12), 58, 96);
+  const hasQ = args.qualityScore != null && Number.isFinite(args.qualityScore);
+  const hasT = args.trustScore != null && Number.isFinite(args.trustScore);
+  const canScoreMastery = hasQ && hasT;
+  const q = hasQ ? (args.qualityScore as number) : 0;
+  const t = hasT ? (args.trustScore as number) : 0;
+  const base = canScoreMastery ? clamp(Math.round(q * 10 + t * 0.22), 0, 100) : 0;
 
   const raw: string[] = [];
   for (const c of args.technicalConcepts.slice(0, 5)) {
@@ -64,16 +67,15 @@ export function buildSkillMasteryNodes(args: {
     if (labels.length >= 5) break;
   }
 
-  if (labels.length === 0) {
-    labels.push("세션 핵심 개념 정리", "학습 목표 정합성", "FinOps·토큰 효율");
-  }
+  const SLOT_LABELS = ["세션 핵심 개념 정리", "학습 목표 정합성", "FinOps·토큰 효율"] as const;
+  const displayLabels = labels.length > 0 ? labels : [...SLOT_LABELS];
 
-  return labels.map((label, i) => {
-    const jitter = (hashLabel(label + String(i)) % 9) - 4;
+  return displayLabels.map((label, i) => {
+    const jitter = canScoreMastery ? (hashLabel(label + String(i)) % 7) - 3 : 0;
     return {
       id: `sk-${i}-${hashLabel(label)}`,
       label,
-      masteryPct: clamp(base + jitter - i * 2, 45, 100),
+      masteryPct: canScoreMastery ? clamp(base + jitter - i * 2, 0, 100) : 0,
     };
   });
 }

@@ -13,6 +13,10 @@ const DEMO_PROFILE =
 export function Header() {
   const { mode, setMode, currentCostUsd, accentHex } = useVibe();
   const [securityOpen, setSecurityOpen] = useState(false);
+  const liveSessionUsd =
+    typeof currentCostUsd === "number" && currentCostUsd > 0
+      ? currentCostUsd
+      : null;
 
   return (
     <header className="glass-morphism z-50 flex h-16 min-h-16 shrink-0 items-center gap-2 border-b border-white/40 px-3 backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
@@ -62,16 +66,24 @@ export function Header() {
               <span className="sm:hidden">HIGH</span>
             </motion.button>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-pw-surface-container-low/90 px-2 py-1 shadow-sm backdrop-blur-md sm:px-3">
-            <MaterialSymbol
-              name="payments"
-              fill
-              className="text-[0.95rem] text-pw-secondary sm:text-[16px]"
-            />
-            <span className="whitespace-nowrap font-mono text-[10px] font-bold tabular-nums text-pw-on-surface-variant sm:text-[11px]">
-              세션 ${currentCostUsd.toFixed(4)}
-            </span>
-          </div>
+          {liveSessionUsd != null ? (
+            <motion.div
+              key="session-cost"
+              initial={{ opacity: 0, y: 2 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-pw-surface-container-low/90 px-2 py-1 shadow-sm backdrop-blur-md sm:px-3"
+            >
+              <MaterialSymbol
+                name="payments"
+                fill
+                className="text-[0.95rem] text-pw-secondary sm:text-[16px]"
+              />
+              <span className="whitespace-nowrap font-mono text-[10px] font-bold tabular-nums text-pw-on-surface-variant sm:text-[11px]">
+                세션 ${liveSessionUsd.toFixed(4)}
+              </span>
+            </motion.div>
+          ) : null}
         </div>
       </div>
 

@@ -41,7 +41,7 @@ export function EcoHighModelSwitcher({
           className={cn(
             "flex gap-1 rounded-2xl p-1",
             isHeader
-              ? "border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235),0_1px_2px_0_rgb(0_0_0/0.04)]"
+              ? "w-full min-w-[268px] max-w-[320px] shrink-0 border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235),0_1px_2px_0_rgb(0_0_0/0.04)]"
               : "bg-gray-100",
           )}
         >
@@ -52,8 +52,8 @@ export function EcoHighModelSwitcher({
             disabled={disabled}
             onClick={() => onChange("eco")}
             className={cn(
-              "relative flex flex-1 flex-col items-center justify-center rounded-xl font-semibold transition-colors",
-              isHeader ? "min-h-[44px] px-2 py-2 text-sm" : "min-h-[48px] px-2 py-2.5 text-sm",
+              "relative flex flex-1 shrink-0 flex-col items-center justify-center rounded-xl font-semibold transition-colors",
+              isHeader ? "min-h-[44px] min-w-0 basis-1/2 px-2 py-2 text-sm" : "min-h-[48px] px-2 py-2.5 text-sm",
               isHeader && "active:translate-y-px",
               disabled && "pointer-events-none opacity-50",
               value === "eco"
@@ -84,8 +84,8 @@ export function EcoHighModelSwitcher({
             disabled={disabled}
             onClick={() => onChange("high")}
             className={cn(
-              "relative flex flex-1 flex-col items-center justify-center rounded-xl font-semibold transition-colors",
-              isHeader ? "min-h-[44px] px-2 py-2 text-sm" : "min-h-[48px] px-2 py-2.5 text-sm",
+              "relative flex flex-1 shrink-0 flex-col items-center justify-center rounded-xl font-semibold transition-colors",
+              isHeader ? "min-h-[44px] min-w-0 basis-1/2 px-2 py-2 text-sm" : "min-h-[48px] px-2 py-2.5 text-sm",
               isHeader && "active:translate-y-px",
               disabled && "pointer-events-none opacity-50",
               value === "high"

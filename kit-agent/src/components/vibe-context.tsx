@@ -26,7 +26,7 @@ export interface VibeContextValue {
   hydrated: boolean;
   mode: InferenceCostMode;
   setMode: (m: InferenceCostMode) => void;
-  currentCostUsd: number;
+  currentCostUsd: number | null;
   accentHex: string;
   emotionalFeedback: string;
   visualLabPhase: "idle" | "analyzing" | "done";

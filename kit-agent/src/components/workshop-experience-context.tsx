@@ -20,8 +20,8 @@ export type VisualLabView = "workspace" | "quiz";
 export interface WorkshopExperienceValue {
   inferenceMode: InferenceCostMode;
   setInferenceMode: (m: InferenceCostMode) => void;
-  /** 세션 누적 추정 비용 (데모 HUD, 2초마다 증가) */
-  sessionCostUsd: number;
+  /** 세션 누적 추정 비용 (2초마다 갱신). null = 아직 측정 전(배지 비표시). */
+  sessionCostUsd: number | null;
   emotionalFeedback: string;
   accentHex: string;
   toasts: WorkshopToast[];
@@ -59,7 +59,7 @@ const MEDIA_STATUS = [
 export function WorkshopExperienceProvider({ children }: { children: ReactNode }) {
   const { selectedPersona } = useEducationalPersona();
   const [inferenceMode, setInferenceMode] = useState<InferenceCostMode>("eco");
-  const [sessionCostUsd, setSessionCostUsd] = useState(0);
+  const [sessionCostUsd, setSessionCostUsd] = useState<number | null>(null);
   const [toasts, setToasts] = useState<WorkshopToast[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -82,9 +82,14 @@ export function WorkshopExperienceProvider({ children }: { children: ReactNode }
 
   useEffect(() => {
     const step = inferenceMode === "eco" ? 0.0001 : 0.0005;
-    const id = window.setInterval(() => {
-      setSessionCostUsd((prev) => Number((prev + step).toFixed(6)));
-    }, 2000);
+    const tick = () => {
+      setSessionCostUsd((prev) => {
+        const base = prev ?? 0;
+        return Number((base + step).toFixed(6));
+      });
+    };
+    tick();
+    const id = window.setInterval(tick, 2000);
     return () => window.clearInterval(id);
   }, [inferenceMode]);
 

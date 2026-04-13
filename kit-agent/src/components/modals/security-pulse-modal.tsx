@@ -19,6 +19,57 @@ export type SecurityTrustDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/** 대한민국 개인정보 보호법 — 열람·정정·삭제·처리정지 권리 요약 (UI 안내용, 구체 행사는 운영 정책·법령에 따름) */
+function LegalRightsPipaSection() {
+  return (
+    <section
+      className="mb-5 rounded-2xl border-2 border-slate-200/90 bg-gradient-to-br from-slate-50/95 to-white px-4 py-4 shadow-[0_3px_0_0_rgb(226_232_240)]"
+      aria-labelledby="pipa-legal-rights-heading"
+    >
+      <p
+        id="pipa-legal-rights-heading"
+        className="font-headline text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+      >
+        사용자의 법적 권리
+      </p>
+      <p className="mt-1 text-xs font-semibold leading-snug text-slate-800">
+        「개인정보 보호법」에 따른 정보주체 권리 (VIBE-SOLO-SYNC 학습·세션 환경 안내)
+      </p>
+      <ul className="mt-3 space-y-3 border-t border-slate-200/80 pt-3 text-sm leading-relaxed text-slate-700">
+        <li>
+          <strong className="text-slate-900">제35조(개인정보의 열람)</strong>
+          <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
+            정보주체는 개인정보처리자가 처리하는 개인정보에 대한 열람을 요구할 수 있습니다. 다만,
+            법령에 따라 열람이 제한될 수 있습니다. 본 서비스에서 처리되는 학습·세션 데이터의 열람
+            요청 절차는 운영자가 정한 채널(문의·설정)을 통해 접수됩니다.
+          </span>
+        </li>
+        <li>
+          <strong className="text-slate-900">제36조(개인정보의 정정·삭제)</strong>
+          <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
+            정보주체는 개인정보의 정정 또는 삭제를 요구할 수 있습니다. 처리 목적의 달성·보관
+            기간 경과 등 법령이 정한 사유에 해당하는 경우 삭제가 이루어질 수 있습니다. 잘못된
+            항목에 대해서는 정정 요구를 할 수 있습니다.
+          </span>
+        </li>
+        <li>
+          <strong className="text-slate-900">제37조(개인정보의 처리정지 등)</strong>
+          <span className="mt-0.5 block text-[13px] font-normal text-slate-600">
+            정보주체는 개인정보 처리의 정지를 요구할 수 있으며, 법 제18조 제2항에 해당하는 경우
+            등 법령에 따라 처리정지 요구가 거절될 수 있습니다. 자동화된 결정에 대한 설명 등
+            법이 정한 권리는 각 조항에 따릅니다.
+          </span>
+        </li>
+      </ul>
+      <p className="mt-3 rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
+        위 내용은 2026년 4월 기준 법령 구조에 따른 <strong className="text-slate-700">요약 안내</strong>
+        입니다. 구체적 행사·예외 사유는 「개인정보 보호법」 전문 및 개인정보 처리방침을
+        따릅니다. 분쟁 시 관할 감독기관(개인정보위원회 등) 안내를 참고하시기 바랍니다.
+      </p>
+    </section>
+  );
+}
+
 function DataVolatilityMeter() {
   const snap = useSyncExternalStore(subscribeDataVolatility, getDataVolatilitySnapshot);
   return (
@@ -78,6 +129,7 @@ export function SecurityTrustDialog({
               E2EE 암호화: 활성 — 음성·세션 메타데이터는 휘발성 메모리에서만 처리되며, 학습
               완료 후 즉시 제거됩니다.
             </div>
+            <LegalRightsPipaSection />
             <DataVolatilityMeter />
             <ul className="list-disc space-y-3 pb-1 pl-5 text-sm leading-relaxed text-slate-700">
               <li>

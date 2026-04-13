@@ -1,10 +1,12 @@
 "use client";
 
+import { useId } from "react";
 import {
   BarChart3,
   Clapperboard,
   FileText,
   ImageIcon,
+  Info,
   Loader2,
   ShieldCheck,
 } from "lucide-react";
@@ -14,15 +16,21 @@ import { EcoHighModelSwitcher, type InferenceCostMode } from "@/components/Model
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
+const contestYear = () => new Date().getFullYear();
+
+/** CFO·비동기 폴링 맥락 — Info 툴팁으로만 노출 */
+const CFO_ASYNC_OPTIMIZATION_CAPTION =
+  "최적화 모드 작동 중: 필요한 만큼만 똑똑하게 자원을 나눠 써서 더 빠르고 정확한 결과를 준비하고 있습니다.";
+
 export interface ZenLearningHeaderProps {
   inferenceMode: InferenceCostMode;
   onInferenceModeChange: (v: InferenceCostMode) => void;
   disabled?: boolean;
   /** 0–100 학습 진행 */
   todayProgressPct: number;
-  /** 역량 5축 평균 (간단 표기) */
+  /** 역량 5축 평균 (동기: userMastery) */
   employabilityAvg: number;
-  /** FinOps 절감률 등 */
+  /** FinOps 절감률 % (동기: savingsRate) */
   savingsPct: number;
   /** 보안 스냅샷: 안전 여부 */
   securityOk: boolean;
@@ -37,8 +45,8 @@ export interface ZenLearningHeaderProps {
   studioMediaRunning?: boolean;
   /** 분석 상태 한 줄 (심사용 HUD) */
   studioStatusLabel?: string | null;
-  /** 세션 누적 추정 비용 (데모 HUD) */
-  sessionCostUsd?: number;
+  /** 세션 누적 추정 비용 USD (동기: currentCost) */
+  sessionCostUsd?: number | null;
   className?: string;
 }
 
@@ -63,6 +71,21 @@ export function ZenLearningHeader({
   sessionCostUsd,
   className,
 }: ZenLearningHeaderProps) {
+  const cfoTipId = useId();
+  const currentCost =
+    typeof sessionCostUsd === "number" && Number.isFinite(sessionCostUsd)
+      ? sessionCostUsd
+      : 0;
+  const savingsRate = Math.max(
+    0,
+    Math.min(100, Number.isFinite(savingsPct) ? savingsPct : 0),
+  );
+  const userMastery = Math.max(
+    0,
+    Number.isFinite(employabilityAvg) ? employabilityAvg : 0,
+  );
+  const progressSafe = Math.max(0, Math.min(100, Number.isFinite(todayProgressPct) ? todayProgressPct : 0));
+
   return (
     <header
       className={cn(
@@ -70,18 +93,25 @@ export function ZenLearningHeader({
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-2 px-3 py-3 sm:gap-4 sm:px-5">
-        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
-          <div>
+      <div
+        className={cn(
+          "mx-auto w-full max-w-[1400px] px-3 py-3 sm:px-4 lg:px-5",
+          "flex flex-col gap-2.5",
+          "lg:grid lg:grid-cols-[minmax(0,auto)_minmax(280px,1fr)_minmax(0,auto)] lg:items-center lg:gap-x-8 lg:gap-y-0",
+        )}
+      >
+        {/* 좌: 브랜드 · 랩/스튜디오 */}
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 lg:shrink-0 lg:flex-nowrap">
+          <div className="shrink-0">
             <p className="font-sans text-[8px] font-semibold uppercase tracking-[0.2em] text-[#4B4B4B]/45 sm:text-[9px]">
               KIT Vibe-Coding
             </p>
             <p className="font-sans text-base font-semibold leading-tight tracking-tight text-[#4B4B4B] sm:text-lg">
-              2026
+              {contestYear()}
             </p>
           </div>
           {onOpenVisualLab && onOpenMediaStudio ? (
-            <div className="flex max-w-[min(100vw-8rem,200px)] items-center gap-1.5 overflow-x-auto sm:max-w-none">
+            <div className="flex min-w-0 shrink-0 items-center gap-1.5 overflow-x-auto sm:gap-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <motion.button
                 type="button"
                 whileTap={{ y: 2, scale: 0.98 }}
@@ -122,25 +152,29 @@ export function ZenLearningHeader({
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 justify-center overflow-x-auto overflow-y-visible px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* 중: ECO / HIGH — 최소 폭 확보로 클리핑 방지 */}
+        <div className="flex w-full min-w-0 shrink-0 justify-center lg:min-w-[280px] lg:justify-center">
           <EcoHighModelSwitcher
             variant="header"
             value={inferenceMode}
             onChange={onInferenceModeChange}
             disabled={disabled}
-            className="w-full min-w-[240px] max-w-[260px] shrink-0 sm:max-w-[300px]"
+            className="w-full shrink-0 lg:w-[300px]"
           />
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
-          {typeof sessionCostUsd === "number" ? (
-            <span
-              className="hidden rounded-full border-2 border-cyan-100 bg-cyan-50/90 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-800 sm:inline"
-              title="세션 누적 추정 비용 (데모)"
-            >
-              ${sessionCostUsd.toFixed(4)} 세션
-            </span>
-          ) : null}
+        {/* 우: 비용 · 상태 · 역량 · 절감(+Info) · 보안 · 액션 */}
+        <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-start gap-2 sm:gap-2.5 lg:justify-end lg:gap-3">
+          <motion.span
+            key={currentCost}
+            initial={{ opacity: 0, y: 2 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden rounded-full border-2 border-cyan-100 bg-cyan-50/90 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-800 sm:inline"
+            title="세션 누적 추정 비용 (currentCost)"
+          >
+            ${currentCost.toFixed(4)} 세션
+          </motion.span>
           {studioStatusLabel ? (
             <span
               className="max-w-[140px] truncate rounded-lg border border-emerald-200 bg-emerald-50/90 px-2 py-0.5 text-[9px] font-medium text-emerald-900 sm:max-w-[220px] sm:text-[10px]"
@@ -151,29 +185,51 @@ export function ZenLearningHeader({
           ) : null}
           <div
             className="hidden items-center gap-2 rounded-2xl border-2 border-gray-100 bg-white px-2 py-1.5 shadow-[0_2px_0_0_rgb(229_231_235)] sm:flex"
-            title="오늘의 학습 · 역량 평균"
+            title="오늘의 학습 · 역량 평균 (userMastery)"
           >
             <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-gray-100 bg-[#FAFAFA] font-sans text-[10px] font-bold text-[#4B4B4B]">
               나
             </div>
-            <div className="min-w-[72px] max-w-[88px]">
+            <div className="min-w-[72px] max-w-[88px] shrink-0">
               <p className="font-sans text-[9px] font-medium text-[#4B4B4B]/50">학습</p>
-              <Progress value={todayProgressPct} className="mt-0.5 h-1 bg-gray-100 [&>div]:bg-emerald-500" />
+              <Progress value={progressSafe} className="mt-0.5 h-1 bg-gray-100 [&>div]:bg-emerald-500" />
               <p className="mt-0.5 font-sans text-[9px] tabular-nums text-[#4B4B4B]/70">
-                역량 {Math.round(employabilityAvg)}
+                역량 {Math.round(userMastery)}
               </p>
             </div>
           </div>
 
-          <span
-            className="inline-flex items-center rounded-full border-2 border-emerald-100 bg-emerald-50/80 px-2 py-0.5 font-sans text-[10px] font-semibold tabular-nums text-emerald-700 sm:text-[11px]"
-            title="추정 절감 효율"
-          >
-            절약 {Math.round(savingsPct)}%
-          </span>
+          <div className="group/cfo-tip relative inline-flex shrink-0 items-center gap-0.5">
+            <span
+              className="inline-flex items-center rounded-full border-2 border-emerald-100 bg-emerald-50/80 px-2 py-0.5 font-sans text-[10px] font-semibold tabular-nums text-emerald-700 sm:text-[11px]"
+              title="추정 절감 효율 (savingsRate)"
+            >
+              절약 {Math.round(savingsRate)}%
+            </span>
+            <button
+              type="button"
+              tabIndex={0}
+              className="shrink-0 rounded-full p-0.5 text-[#4B4B4B]/45 outline-none transition-colors hover:text-[#4B4B4B]/75 focus-visible:ring-2 focus-visible:ring-emerald-400/40 focus-visible:ring-offset-2"
+              aria-label="최적화 모드·CFO 안내"
+              aria-describedby={cfoTipId}
+            >
+              <Info className="size-3.5" strokeWidth={2} aria-hidden />
+            </button>
+            <div
+              id={cfoTipId}
+              role="tooltip"
+              className={cn(
+                "pointer-events-none invisible absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(18rem,calc(100vw-2rem))] origin-top-right scale-95 rounded-2xl border-2 border-gray-100 bg-white px-3 py-2.5 text-left text-[11px] font-normal leading-snug text-[#4B4B4B]/80 opacity-0 shadow-[0_4px_0_0_rgb(229_231_235)] transition-all duration-150",
+                "group-hover/cfo-tip:visible group-hover/cfo-tip:scale-100 group-hover/cfo-tip:opacity-100",
+                "group-focus-within/cfo-tip:visible group-focus-within/cfo-tip:scale-100 group-focus-within/cfo-tip:opacity-100",
+              )}
+            >
+              {CFO_ASYNC_OPTIMIZATION_CAPTION}
+            </div>
+          </div>
 
           <span
-            className="inline-flex size-8 items-center justify-center rounded-full border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235)]"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-100 bg-white shadow-[0_2px_0_0_rgb(229_231_235)]"
             title={securityOk ? "보안 상태 양호" : "보안 모니터링 중"}
           >
             <ShieldCheck
@@ -188,7 +244,7 @@ export function ZenLearningHeader({
             variant="outline"
             size="sm"
             onClick={onOpenReport}
-            className="h-8 gap-1 rounded-2xl border-2 border-gray-100 bg-white px-2.5 text-[11px] font-medium text-[#4B4B4B] shadow-[0_2px_0_0_rgb(229_231_235)] hover:bg-[#FAFAFA] sm:h-9 sm:px-3"
+            className="h-8 shrink-0 gap-1 rounded-2xl border-2 border-gray-100 bg-white px-2.5 text-[11px] font-medium text-[#4B4B4B] shadow-[0_2px_0_0_rgb(229_231_235)] hover:bg-[#FAFAFA] sm:h-9 sm:px-3"
           >
             <BarChart3 className="size-3.5 shrink-0" aria-hidden />
             <span className="hidden xs:inline">보고서</span>
@@ -199,7 +255,7 @@ export function ZenLearningHeader({
             onClick={onOpenSessionReceipt}
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon-sm" }),
-              "size-8 rounded-full border-2 border-transparent text-[#4B4B4B]/55 hover:border-gray-100 hover:bg-[#FAFAFA] hover:text-[#4B4B4B]",
+              "size-8 shrink-0 rounded-full border-2 border-transparent text-[#4B4B4B]/55 hover:border-gray-100 hover:bg-[#FAFAFA] hover:text-[#4B4B4B]",
             )}
             aria-label="세션 영수증"
           >

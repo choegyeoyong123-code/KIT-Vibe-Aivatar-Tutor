@@ -115,7 +115,7 @@ export function FinOpsModelInsightWidget({
   const savingsPct = useMemo(() => {
     const p = finOps?.measured_performance?.savingsPercentage ?? finOps?.estimated_savings?.savingsPercentage ?? finOps?.savingsPercentage;
     if (p != null && Number.isFinite(p)) return Math.min(100, Math.max(0, p));
-    return finOps?.estimated_savings?.savingsPercentage ?? 82;
+    return finOps?.estimated_savings?.savingsPercentage ?? 0;
   }, [finOps]);
 
   const isEcoActive = mode === "Eco";

@@ -10,6 +10,10 @@ import type { PersonaId } from "@/lib/media-persona/types";
 import { generateTextToVideoPromptPack } from "@/lib/media-persona/video-prompt-engine";
 import { rateLimitExceededResponse } from "@/lib/security/rate-limit";
 import { sanitizeUserPlaintextForLlm } from "@/lib/privacy/sanitize-for-llm";
+import {
+  EDUCATIONAL_PERSONAS,
+  type EducationalPersonaId,
+} from "@/constants/personas";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -28,8 +32,22 @@ interface Body {
   userVoiceTtsInstructions?: string | null;
 }
 
+/** 워크숍 5인 페르소나 → 미디어 스크립트 톤(2종) 매핑 */
+const EDUCATIONAL_TO_MEDIA_PERSONA: Record<EducationalPersonaId, PersonaId> = {
+  metaphor_mage: "shin-chan",
+  quest_master: "shin-chan",
+  pair_mate: "neutral-educator",
+  compressed_cto: "neutral-educator",
+  deepdive_professor: "neutral-educator",
+};
+
 function resolvePersona(raw: unknown): PersonaId {
-  return raw === "neutral-educator" ? "neutral-educator" : "shin-chan";
+  if (raw === "neutral-educator") return "neutral-educator";
+  if (raw === "shin-chan") return "shin-chan";
+  if (typeof raw === "string" && EDUCATIONAL_PERSONAS.some((p) => p.id === raw)) {
+    return EDUCATIONAL_TO_MEDIA_PERSONA[raw as EducationalPersonaId];
+  }
+  return "shin-chan";
 }
 
 export async function POST(req: NextRequest) {

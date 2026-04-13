@@ -31,11 +31,11 @@ export type RadarScores = Record<RadarAxisKey, number>;
 
 export function defaultRadarScores(): RadarScores {
   return {
-    logic: 52,
-    optimization: 48,
-    security: 55,
-    cleanCode: 50,
-    debugging: 46,
+    logic: 0,
+    optimization: 0,
+    security: 0,
+    cleanCode: 0,
+    debugging: 0,
   };
 }
 
@@ -46,19 +46,24 @@ export function deriveRadarScores(args: {
   loopCount: number;
   summaryLength: number;
 }): RadarScores {
-  const t = args.trustScore != null && Number.isFinite(args.trustScore) ? args.trustScore : 68;
-  const q = args.qualityScore != null && Number.isFinite(args.qualityScore) ? args.qualityScore : 6.5;
+  const hasT = args.trustScore != null && Number.isFinite(args.trustScore);
+  const hasQ = args.qualityScore != null && Number.isFinite(args.qualityScore);
+  if (!hasT && !hasQ) {
+    return { logic: 0, optimization: 0, security: 0, cleanCode: 0, debugging: 0 };
+  }
+  const t = hasT ? (args.trustScore as number) : 0;
+  const q = hasQ ? (args.qualityScore as number) : 0;
   const loops = Math.min(8, Math.max(0, args.loopCount));
   const len = Math.min(1, args.summaryLength / 8000);
 
   const base = 38 + t * 0.22 + q * 4.2 + loops * 2.1 + len * 18;
 
   return {
-    logic: clamp(Math.round(base + 6 + (q % 3)), 28, 96),
-    optimization: clamp(Math.round(base + 2 + loops * 1.5), 28, 96),
-    security: clamp(Math.round(base - 4 + t * 0.05), 28, 96),
-    cleanCode: clamp(Math.round(base + (len * 12)), 28, 96),
-    debugging: clamp(Math.round(base - 2 + loops * 0.8), 28, 96),
+    logic: clamp(Math.round(base + 6 + (q % 3)), 0, 96),
+    optimization: clamp(Math.round(base + 2 + loops * 1.5), 0, 96),
+    security: clamp(Math.round(base - 4 + t * 0.05), 0, 96),
+    cleanCode: clamp(Math.round(base + len * 12), 0, 96),
+    debugging: clamp(Math.round(base - 2 + loops * 0.8), 0, 96),
   };
 }
 

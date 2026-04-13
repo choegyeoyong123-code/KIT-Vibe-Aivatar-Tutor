@@ -10,6 +10,8 @@ import { EDUCATIONAL_PERSONAS } from "@/constants/personas";
 import { useEducationalPersona } from "@/components/educational-persona-context";
 import { useSecurityPulse } from "@/components/security-pulse-context";
 
+const contestYear = () => new Date().getFullYear();
+
 const personaCardBase =
   "flex w-full items-center gap-3 rounded-xl border-2 border-b-4 border-gray-200 bg-white px-3 py-2.5 text-left font-sans transition-transform active:translate-y-1";
 
@@ -95,12 +97,14 @@ function SidebarFinOpsGamified({
         FinOps · 절감
       </p>
       <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="font-sans text-2xl font-black tabular-nums text-[#58CC02]">{bar}%</p>
+        <p className="font-sans text-2xl font-black tabular-nums text-[#58CC02]">
+          {bar > 0 ? `${bar}%` : "—"}
+        </p>
         <p className="pb-0.5 text-right font-sans text-[10px] font-medium text-[#4B4B4B]/60">
           추정 절약
           <br />
           <span className="font-mono text-xs text-[#4B4B4B]">
-            ${totalSavingsUsd.toFixed(2)}
+            {totalSavingsUsd > 0 ? `$${totalSavingsUsd.toFixed(2)}` : "—"}
           </span>
         </p>
       </div>
@@ -118,7 +122,10 @@ function SidebarFinOpsGamified({
         />
       </div>
       <p className="mt-2 font-mono text-[10px] tabular-nums text-[#4B4B4B]/65">
-        누적 절약 토큰 {tokensSaved.toLocaleString("ko-KR")} · Lv.{Math.min(99, 1 + Math.floor(bar / 12))}
+        누적 절약 토큰 {tokensSaved.toLocaleString("ko-KR")} · Lv.
+        {measuredSavingsPct > 0 || tokensSaved > 0
+          ? Math.min(99, 1 + Math.floor(bar / 12))
+          : "—"}
       </p>
     </div>
   );
@@ -149,7 +156,9 @@ export function LearningControlSidebar({
         <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4B4B4B]/55">
           KIT Vibe-Coding
         </p>
-        <p className="mt-0.5 font-sans text-lg font-semibold tracking-tight text-[#4B4B4B]">2026</p>
+        <p className="mt-0.5 font-sans text-lg font-semibold tracking-tight text-[#4B4B4B]">
+          {contestYear()}
+        </p>
         <p className="mt-1.5 font-sans text-[11px] leading-relaxed text-[#4B4B4B]/65">
           튜터·보안·비용을 한 패널에서 조절합니다.
         </p>

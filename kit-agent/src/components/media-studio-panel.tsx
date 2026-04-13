@@ -38,8 +38,12 @@ import { shieldStringFields } from "@/lib/client/pii-shield";
 import { createVoiceProfileEcdhClientSession } from "@/lib/client/voice-response-ecdh";
 import type { VoiceProfileCryptoEnvelope } from "@/lib/media-persona/voice-crypto-types";
 import type { MediaVoiceOutputMode } from "@/lib/media-persona/job-store";
-
-type PersonaId = "shin-chan" | "neutral-educator";
+import type { PersonaId } from "@/lib/media-persona/types";
+import {
+  EDUCATIONAL_PERSONAS,
+  type EducationalPersonaId,
+  getEducationalPersonaById,
+} from "@/constants/personas";
 
 interface PipelineResponse {
   jobId: string;
@@ -72,10 +76,72 @@ const RING_C = 2 * Math.PI * RING_R;
 
 type VoiceUiPhase = "idle" | "recording" | "analyzing" | "ready";
 
+/** 마이크 거부 시 주소창 자물쇠 기준 애니메이션 가이드 */
+function MicLockAddressBarGuide({ footnote }: { footnote?: string | null }) {
+  return (
+    <div
+      className="mb-3 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-3 text-amber-950 shadow-sm"
+      role="region"
+      aria-label="마이크 허용 방법"
+    >
+      <div className="flex items-start gap-3">
+        <motion.div
+          className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-amber-300/90 bg-white shadow-sm"
+          animate={{ scale: [1, 1.07, 1] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          aria-hidden
+        >
+          <motion.div
+            animate={{ opacity: [0.65, 1, 0.65] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Lock className="size-5 text-amber-700" />
+          </motion.div>
+        </motion.div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-xs font-semibold leading-snug">
+            주소창의 자물쇠 아이콘을 누른 뒤, 마이크를 「허용」으로 바꿔주세요
+          </p>
+          <ol className="list-decimal space-y-1.5 pl-4 text-[11px] leading-relaxed text-amber-900/95">
+            <li>
+              주소창 <strong className="font-semibold">왼쪽</strong>의{" "}
+              <strong className="font-semibold">자물쇠</strong> 또는 사이트 정보 아이콘을
+              누릅니다.
+            </li>
+            <li>
+              권한에서 <strong className="font-semibold">마이크</strong>를 찾아{" "}
+              <strong className="font-semibold">허용</strong>으로 바꿉니다.
+            </li>
+            <li>설정을 저장한 뒤 이 탭으로 돌아오면 버튼이 곧바로 살아납니다.</li>
+          </ol>
+          <motion.p
+            className="text-[11px] font-medium leading-snug text-amber-800/90"
+            animate={{ opacity: [0.72, 1, 0.72] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            허용으로 바꾸는 즉시 「내 목소리 학습시키기」가 다시 눌릴 수 있어요.
+          </motion.p>
+          {footnote ? (
+            <p className="border-t border-amber-200/80 pt-2 text-[11px] leading-snug text-amber-900/85">
+              {footnote}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MediaStudioPanel() {
   const formId = useId();
   const [masterContext, setMasterContext] = useState("");
-  const [personaId, setPersonaId] = useState<PersonaId>("shin-chan");
+  const [educationalPersonaId, setEducationalPersonaId] =
+    useState<EducationalPersonaId>("metaphor_mage");
+  const [lastRunEducationalPersonaId, setLastRunEducationalPersonaId] =
+    useState<EducationalPersonaId | null>(null);
+  const [micPermission, setMicPermission] = useState<PermissionState | "unknown">("unknown");
+  /** getUserMedia 거부 등 — 권한 API와 별도로 짧은 안내(허용 시 초기화) */
+  const [micSoftNotice, setMicSoftNotice] = useState<string | null>(null);
   const [extra, setExtra] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +192,55 @@ export function MediaStudioPanel() {
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    let perm: PermissionStatus | null = null;
+
+    const subscribeMic = async () => {
+      try {
+        const next = await navigator.permissions.query({
+          name: "microphone" as PermissionName,
+        });
+        if (!alive) return;
+        if (perm && perm !== next) {
+          perm.onchange = null;
+        }
+        perm = next;
+        setMicPermission(next.state);
+        next.onchange = () => {
+          if (alive) setMicPermission(next.state);
+        };
+      } catch {
+        /* Safari 등: microphone PermissionName 미지원 — getUserMedia로만 확인 */
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void subscribeMic();
+    };
+
+    void subscribeMic();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      alive = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (perm) perm.onchange = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (micPermission === "granted") setMicSoftNotice(null);
+  }, [micPermission]);
+
   const analyzeBlob = useCallback(async (blob: Blob) => {
+    if (micPermission === "denied") {
+      setVoicePhase("idle");
+      setMicSoftNotice(
+        "마이크 권한이 거부된 상태에서는 서버로 음성을 보내지 않습니다. 허용으로 바꾼 뒤 다시 녹음해 주세요.",
+      );
+      return;
+    }
     setVoicePhase("analyzing");
     setError(null);
     setVoiceCryptoLocked(false);
@@ -168,7 +282,7 @@ export function MediaStudioPanel() {
       setVoiceCryptoLocked(false);
       setError(e instanceof Error ? e.message : "음성 분석 오류");
     }
-  }, []);
+  }, [micPermission]);
 
   const finishRecording = useCallback(() => {
     clearTick();
@@ -190,7 +304,10 @@ export function MediaStudioPanel() {
 
     try {
       setVoiceCryptoLocked(false);
+      setMicSoftNotice(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicPermission("granted");
+      setMicSoftNotice(null);
       streamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -242,17 +359,35 @@ export function MediaStudioPanel() {
           finishRecording();
         }
       }, 100);
-    } catch {
-      setError("마이크 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.");
+    } catch (e) {
+      const dom = e instanceof DOMException ? e : null;
+      const deniedLike =
+        dom?.name === "NotAllowedError" || dom?.name === "PermissionDeniedError";
+      if (deniedLike) {
+        setMicPermission("denied");
+        setMicSoftNotice(
+          "브라우저가 마이크를 막았을 때가 많아요. 당황하지 마시고, 위 안내 순서대로 '허용'으로 바꾼 뒤 이 버튼을 다시 눌러 주세요.",
+        );
+        return;
+      }
+      setMicSoftNotice(null);
+      setError("마이크를 시작할 수 없습니다. 다른 앱이 마이크를 점유 중인지 확인한 뒤 다시 시도해 주세요.");
     }
   }, [analyzeBlob, finishRecording, voicePhase]);
 
   const runPipeline = useCallback(async () => {
     setError(null);
     if (outputVoice === "user" && !userTtsInstructions?.trim()) {
+      if (micPermission === "denied") {
+        setMicSoftNotice(
+          "내 목소리 모드는 마이크 허용 후 학습이 끝나야 영상 생성으로 이어질 수 있어요. 먼저 주소창 자물쇠에서 마이크를 허용해 주세요.",
+        );
+        return;
+      }
       setError("내 목소리 모드에서는 먼저 🎙️ 내 목소리 학습시키기를 완료해 주세요.");
       return;
     }
+    setMicSoftNotice(null);
     setLoading(true);
     setResult(null);
     setHitlOpen(false);
@@ -260,7 +395,7 @@ export function MediaStudioPanel() {
       const pipelineBody = await shieldStringFields(
         {
           masterContext,
-          personaId,
+          personaId: educationalPersonaId,
           extraInstruction: extra.trim() || "",
           voiceOutputMode: outputVoice,
           userVoiceTtsInstructions:
@@ -287,6 +422,7 @@ export function MediaStudioPanel() {
       const data = (await res.json()) as PipelineResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || "파이프라인 실패");
       setResult(data);
+      setLastRunEducationalPersonaId(educationalPersonaId);
       setLastRenderVoice(outputVoice);
       if (data.hitlRequired) setHitlOpen(true);
     } catch (e) {
@@ -294,7 +430,14 @@ export function MediaStudioPanel() {
     } finally {
       setLoading(false);
     }
-  }, [masterContext, personaId, extra, outputVoice, userTtsInstructions]);
+  }, [
+    masterContext,
+    educationalPersonaId,
+    extra,
+    outputVoice,
+    userTtsInstructions,
+    micPermission,
+  ]);
 
   const approveRender = useCallback(
     async (approved: boolean) => {
@@ -345,12 +488,13 @@ export function MediaStudioPanel() {
     [result?.jobId, outputVoice, userTtsInstructions],
   );
 
+  const badgePersona =
+    getEducationalPersonaById(lastRunEducationalPersonaId ?? educationalPersonaId) ??
+    getEducationalPersonaById("metaphor_mage");
   const vocalBadgeLabel =
     lastRenderVoice === "user"
-      ? "Vocal: Your Voice"
-      : personaId === "shin-chan"
-        ? "Vocal: Persona · 짱구 풍"
-        : "Vocal: Persona · 중립 교육자";
+      ? "내 목소리로 재생"
+      : `페르소나 음성 · ${badgePersona?.name ?? "튜터"}`;
 
   const dashOffset = RING_C * (1 - recordProgress);
 
@@ -360,8 +504,7 @@ export function MediaStudioPanel() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Media Studio</h1>
           <p className="text-muted-foreground text-sm">
-            Knowledge Master Context → 페르소나 대본(JSON) → Veo/Sora급 T2V 프롬프트 → TTS +
-            (ffmpeg 시) 플레이스홀더 MP4. CFO 추정 비용 초과 시 HITL.
+            학습 미디어 스튜디오: AI와 함께 나만의 강의 영상을 제작하세요
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -394,14 +537,14 @@ export function MediaStudioPanel() {
             입력
           </CardTitle>
           <CardDescription>
-            `buildMasterContext`로 만든 문자열을 붙여 넣거나, 강의 노트·증류 텍스트를 그대로
-            사용하세요.
+            강의에 사용할 본문이나 요약을 붙여 넣고, 튜터 톤을 고른 뒤 아래에서 영상 생성을
+            진행하세요.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor={`${formId}-ctx`}>Knowledge Master Context</Label>
+              <Label htmlFor={`${formId}-ctx`}>강의 본문 / 학습 자료</Label>
               <Textarea
                 id={`${formId}-ctx`}
                 className="min-h-[200px] font-mono text-xs"
@@ -415,11 +558,16 @@ export function MediaStudioPanel() {
               <select
                 id={`${formId}-persona`}
                 className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-                value={personaId}
-                onChange={(e) => setPersonaId(e.target.value as PersonaId)}
+                value={educationalPersonaId}
+                onChange={(e) =>
+                  setEducationalPersonaId(e.target.value as EducationalPersonaId)
+                }
               >
-                <option value="shin-chan">짱구풍 (헤에~ / 미스터~ 티)</option>
-                <option value="neutral-educator">중립 교육자</option>
+                {EDUCATIONAL_PERSONAS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.emoji} {p.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
@@ -435,6 +583,9 @@ export function MediaStudioPanel() {
           </div>
 
           <div className="rounded-2xl border-2 border-gray-100 bg-gradient-to-b from-white to-slate-50/80 p-4 shadow-[0_4px_0_0_rgb(229_231_235)] sm:p-5">
+            {micPermission === "denied" ? (
+              <MicLockAddressBarGuide footnote={micSoftNotice} />
+            ) : null}
             <div className="mb-3 flex flex-col gap-1">
               <p className="text-sm font-bold text-slate-800">
                 내 목소리로 듣기{" "}
@@ -538,6 +689,7 @@ export function MediaStudioPanel() {
                     type="button"
                     variant="cyanTactile"
                     size="lg"
+                    disabled={micPermission === "denied"}
                     className="btn-train-voice relative min-h-11 gap-2 overflow-hidden rounded-2xl px-5 text-sm sm:min-h-12 sm:px-6 sm:text-base"
                     onClick={startRecording}
                   >
@@ -637,16 +789,24 @@ export function MediaStudioPanel() {
               {error}
             </p>
           ) : null}
-          <Button
-            type="button"
-            variant="chunky"
-            disabled={loading || !masterContext.trim()}
-            onClick={runPipeline}
-            className="w-full min-h-11 gap-2 rounded-2xl sm:w-auto sm:min-h-12"
-          >
-            {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-            Phase 1–2 실행 (+ CFO 판단)
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="chunky"
+              disabled={loading || !masterContext.trim()}
+              onClick={runPipeline}
+              className="w-full min-h-11 gap-2 rounded-2xl sm:w-auto sm:min-h-12"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+              학습 영상 생성하기
+            </Button>
+            <span
+              className="inline-flex shrink-0 items-center rounded-full border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+              title="예상 비용이 안전 한도를 넘으면 CFO(비용 감시) 단계에서 승인을 요청할 수 있어요. 그동안 화면은 멈추지 않고 대기합니다."
+            >
+              CFO
+            </span>
+          </div>
         </CardContent>
       </Card>
 

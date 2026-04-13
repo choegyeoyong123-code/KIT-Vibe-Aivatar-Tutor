@@ -35,8 +35,8 @@ function useAnimatedUsd(target: number) {
 
 /** 토큰 효율성 — 아이콘 + 에메랄드 볼드 수치만 */
 export function FinOpsEfficiencyEnginePanel({
-  measuredSavingsPct = 82,
-  totalSavingsUsd = 1245.67,
+  measuredSavingsPct = 0,
+  totalSavingsUsd = 0,
   tokensSaved = 0,
   className,
 }: FinOpsEfficiencyEnginePanelProps) {

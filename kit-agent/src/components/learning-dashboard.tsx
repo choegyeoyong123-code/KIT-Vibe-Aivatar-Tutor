@@ -533,10 +533,15 @@ export function LearningDashboard() {
   const qualityScore = state?.qualityScore;
   const trustScore = state?.trustScore;
   const todayLearnProgressValue = useMemo(() => {
-    if (loading) return 62;
-    if (state?.structuredSummary && summary.trim()) return 100;
-    if (summary.trim()) return 88;
-    return 10;
+    const s = summary.trim().length;
+    if (loading) {
+      if (state?.structuredSummary && s > 0) return 100;
+      if (s > 0) return Math.min(95, Math.round((s / 8000) * 100));
+      return 0;
+    }
+    if (state?.structuredSummary && s > 0) return 100;
+    if (s > 0) return Math.min(100, Math.round((s / 8000) * 100));
+    return 0;
   }, [loading, state?.structuredSummary, summary]);
 
   /** 역량 진단(0) → 탐색(1) → 분석(2) → 보안검사(3) */
@@ -593,8 +598,9 @@ export function LearningDashboard() {
   const careerProofLabel = useMemo(() => {
     const c = state?.distilledData?.technical_concepts?.[0]?.concept?.trim();
     const o = state?.distilledData?.core_learning_objectives?.[0]?.trim();
-    const fallback = summarizationInstruction.trim().slice(0, 40) || "세션 핵심 학습 주제";
-    return (c || o || fallback).slice(0, 56);
+    const fromInstruction = summarizationInstruction.trim().slice(0, 40);
+    const raw = c || o || fromInstruction;
+    return raw ? raw.slice(0, 56) : "";
   }, [state?.distilledData, summarizationInstruction]);
   const distillRound = state?.distillRound ?? 0;
   const admin = state?.adminNotification;
@@ -619,7 +625,7 @@ export function LearningDashboard() {
     if (m != null && Number.isFinite(m)) return Math.min(100, Math.max(0, m));
     const e = state?.finOps?.estimated_savings?.savingsPercentage;
     if (e != null && Number.isFinite(e)) return Math.min(100, Math.max(0, e));
-    return 82;
+    return 0;
   }, [state?.finOps]);
 
   const finTotalSavingsUsd = useMemo(

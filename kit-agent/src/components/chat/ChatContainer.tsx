@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { MaterialSymbol } from "@/components/material-symbol";
 import { cn } from "@/lib/utils";
 import { getWorkshopDemoUserDisplayName, useVibe } from "@/components/vibe-context";
+import { AsyncProcessingLaymanTooltip } from "@/components/async-processing-layman-tooltip";
 import { WorkshopInteractiveQuizMock } from "@/components/workshop-interactive-quiz-mock";
 
 const HERO_IMAGE =
@@ -19,6 +20,8 @@ const VOICE_RING_LEN = 2 * Math.PI * VOICE_RING_R;
 
 export function ChatContainer() {
   const [draft, setDraft] = useState("");
+  const asyncQuizTipId = useId();
+  const asyncMediaTipId = useId();
   const demoName = getWorkshopDemoUserDisplayName();
   const {
     selectedPersona,
@@ -287,79 +290,93 @@ export function ChatContainer() {
                 ) : null}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <motion.button
-                    id="btn-quiz"
-                    type="button"
-                    layout
-                    whileTap={{ y: 2, scale: 0.995 }}
-                    disabled={visualLabPhase === "analyzing"}
-                    onClick={startVisualLabSimulation}
-                    className={cn(
-                      "tactile-button group relative flex transform items-center justify-between overflow-hidden rounded-2xl border-b-4 border-pw-primary bg-pw-primary-container p-5 text-left text-white transition-all disabled:opacity-70",
-                    )}
-                  >
-                    <div className="relative z-10 flex flex-col text-left">
-                      <span className="mb-1 text-xs font-bold tracking-widest uppercase opacity-80">
-                        Visual Lab
-                      </span>
-                      <span className="font-headline text-lg font-bold">
-                        이미지 기반 퀴즈 생성
-                      </span>
-                      <span className="mt-2 text-[11px] font-medium opacity-90">
-                        <Link
-                          href="/visual-lab"
-                          className="underline decoration-white/50 underline-offset-2 hover:decoration-white"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          전체 Visual Lab 페이지 →
-                        </Link>
-                      </span>
-                    </div>
-                    <MaterialSymbol
-                      name="psychology"
+                  <div className="relative">
+                    <motion.button
+                      id="btn-quiz"
+                      type="button"
+                      layout
+                      whileTap={{ y: 2, scale: 0.995 }}
+                      disabled={visualLabPhase === "analyzing"}
+                      onClick={startVisualLabSimulation}
+                      aria-busy={visualLabPhase === "analyzing"}
                       className={cn(
-                        "relative z-10 text-3xl opacity-80",
-                        visualLabPhase === "analyzing" && "animate-spin",
+                        "tactile-button group relative flex w-full transform items-center justify-between overflow-hidden rounded-2xl border-b-4 border-pw-primary bg-pw-primary-container p-5 text-left text-white transition-all disabled:opacity-70",
                       )}
+                    >
+                      <div className="relative z-10 flex flex-col text-left">
+                        <span className="mb-1 text-xs font-bold tracking-widest uppercase opacity-80">
+                          Visual Lab
+                        </span>
+                        <span className="font-headline text-lg font-bold">
+                          이미지 기반 퀴즈 생성
+                        </span>
+                        <span className="mt-2 text-[11px] font-medium opacity-90">
+                          <Link
+                            href="/visual-lab"
+                            className="underline decoration-white/50 underline-offset-2 hover:decoration-white"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            전체 Visual Lab 페이지 →
+                          </Link>
+                        </span>
+                      </div>
+                      <MaterialSymbol
+                        name="psychology"
+                        className={cn(
+                          "relative z-10 text-3xl opacity-80",
+                          visualLabPhase === "analyzing" && "animate-spin",
+                        )}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-tr from-pw-primary to-pw-primary-container opacity-50" />
+                    </motion.button>
+                    <AsyncProcessingLaymanTooltip
+                      visible={visualLabPhase === "analyzing"}
+                      descriptionId={asyncQuizTipId}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-pw-primary to-pw-primary-container opacity-50" />
-                  </motion.button>
+                  </div>
 
-                  <motion.button
-                    id="btn-media"
-                    type="button"
-                    layout
-                    whileTap={{ y: 2, scale: 0.995 }}
-                    disabled={mediaStudioBusy}
-                    onClick={startMediaStudioSimulation}
-                    className="tactile-button group relative flex transform items-center justify-between overflow-hidden rounded-2xl border-b-4 border-[#004e5c] bg-pw-secondary p-5 text-left text-white transition-all disabled:opacity-70"
-                  >
-                    <div className="relative z-10 flex flex-col text-left">
-                      <span className="mb-1 text-xs font-bold tracking-widest uppercase opacity-80">
-                        Media Studio
-                      </span>
-                      <span className="font-headline text-lg font-bold">
-                        랩/오디오 변환 영상 생성
-                      </span>
-                      <span className="mt-2 text-[11px] font-medium opacity-90">
-                        <Link
-                          href="/media-studio"
-                          className="underline decoration-white/50 underline-offset-2 hover:decoration-white"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          전체 Media Studio →
-                        </Link>
-                      </span>
-                    </div>
-                    <MaterialSymbol
-                      name="equalizer"
-                      className={cn(
-                        "relative z-10 text-3xl opacity-80",
-                        mediaStudioBusy && "animate-spin",
-                      )}
+                  <div className="relative">
+                    <motion.button
+                      id="btn-media"
+                      type="button"
+                      layout
+                      whileTap={{ y: 2, scale: 0.995 }}
+                      disabled={mediaStudioBusy}
+                      onClick={startMediaStudioSimulation}
+                      aria-busy={mediaStudioBusy}
+                      className="tactile-button group relative flex w-full transform items-center justify-between overflow-hidden rounded-2xl border-b-4 border-[#004e5c] bg-pw-secondary p-5 text-left text-white transition-all disabled:opacity-70"
+                    >
+                      <div className="relative z-10 flex flex-col text-left">
+                        <span className="mb-1 text-xs font-bold tracking-widest uppercase opacity-80">
+                          Media Studio
+                        </span>
+                        <span className="font-headline text-lg font-bold">
+                          랩/오디오 변환 영상 생성
+                        </span>
+                        <span className="mt-2 text-[11px] font-medium opacity-90">
+                          <Link
+                            href="/media-studio"
+                            className="underline decoration-white/50 underline-offset-2 hover:decoration-white"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            전체 Media Studio →
+                          </Link>
+                        </span>
+                      </div>
+                      <MaterialSymbol
+                        name="equalizer"
+                        className={cn(
+                          "relative z-10 text-3xl opacity-80",
+                          mediaStudioBusy && "animate-spin",
+                        )}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-tr from-[#004e5c] to-pw-secondary opacity-50" />
+                    </motion.button>
+                    <AsyncProcessingLaymanTooltip
+                      visible={mediaStudioBusy}
+                      descriptionId={asyncMediaTipId}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-[#004e5c] to-pw-secondary opacity-50" />
-                  </motion.button>
+                  </div>
                 </div>
               </div>
             </div>

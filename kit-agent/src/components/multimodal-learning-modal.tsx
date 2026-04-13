@@ -27,6 +27,7 @@ import {
   type EducationalPersonaId,
 } from "@/constants/personas";
 import { useEducationalPersona } from "@/components/educational-persona-context";
+import { StudioAsyncLaymanHint } from "@/components/studio-async-layman-hint";
 
 export type MultimodalStudioTab = "visual" | "media";
 
@@ -373,6 +374,7 @@ export function MultimodalLearningModal({
           {tab === "visual" ? (
             <div className="mt-5 space-y-4">
               <StudioGradientBar active={visualLoading} />
+              {visualLoading ? <StudioAsyncLaymanHint className="mt-2" /> : null}
               <div
                 role="button"
                 tabIndex={0}
@@ -518,6 +520,7 @@ export function MultimodalLearningModal({
           ) : (
             <div className="mt-5 space-y-4">
               <StudioGradientBar active={mediaLoading} />
+              {mediaLoading ? <StudioAsyncLaymanHint className="mt-2" /> : null}
               <div
                 className={dropZoneClass(mediaDrag)}
                 onDragOver={(e) => {
